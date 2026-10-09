@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scale From Zero To Millions — Abolfazl Soltani</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060914; --bg2:#0b1024; --text:#e8eefc; --muted:#8a97b8; --soft:#b6c2de;
+  --cyan:#22d3ee; --violet:#a78bfa; --lime:#a3e635; --pink:#f472b6; --amber:#fbbf24; --red:#fb7185; --green:#34d399;
+  --line:rgba(255,255,255,.09);
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+
+/* ---------- background ---------- */
+#bg{position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(1200px 700px at 12% -10%, rgba(34,211,238,.13), transparent 60%),
+    radial-gradient(1000px 700px at 110% 110%, rgba(167,139,250,.16), transparent 60%),
+    radial-gradient(800px 600px at 80% -20%, rgba(244,114,182,.08), transparent 60%),
+    linear-gradient(180deg,#060914,#080c1c)}
+#bg::after{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%)}
+#net{position:fixed;inset:0;z-index:1;opacity:.55}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);z-index:1;opacity:.35;animation:float 18s ease-in-out infinite}
+.orb.o1{width:420px;height:420px;background:#0ea5e9;left:-120px;top:40%}
+.orb.o2{width:380px;height:380px;background:#7c3aed;right:-100px;top:-80px;animation-delay:-6s}
+.orb.o3{width:300px;height:300px;background:#db2777;right:20%;bottom:-160px;animation-delay:-11s;opacity:.2}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,-40px)}}
+
+/* ---------- deck ---------- */
+#deck{position:absolute;left:50%;top:50%;width:1600px;height:900px;z-index:2;transform-origin:center}
+.slide{position:absolute;inset:0;padding:64px 96px 96px;opacity:0;visibility:hidden;
+  transform:translateX(40px) scale(.985);filter:blur(8px);
+  transition:opacity .6s var(--ease),transform .8s var(--ease),filter .6s var(--ease),visibility 0s .6s}
+.slide.back{transform:translateX(-40px) scale(.985)}
+.slide.active{opacity:1;visibility:visible;transform:none;filter:none;transition:opacity .6s var(--ease),transform .8s var(--ease),filter .6s var(--ease)}
+
+.anim{opacity:0;transform:translateY(26px);filter:blur(6px)}
+.slide.active .anim{animation:rise .85s var(--ease) forwards;animation-delay:calc(var(--i,0)*95ms + 180ms)}
+@keyframes rise{to{opacity:1;transform:none;filter:none}}
+.anim.pop{transform:scale(.85)}
+
+[data-step]{opacity:0;transform:translateY(14px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
+[data-step].shown{opacity:1;transform:none}
+svg [data-step]{transform:none}
+
+/* ---------- typography ---------- */
+.kicker{font:600 15px 'JetBrains Mono',monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--acc,var(--cyan));display:flex;align-items:center;gap:14px}
+.kicker::before{content:"";width:38px;height:2px;background:linear-gradient(90deg,var(--acc,var(--cyan)),transparent)}
+h1,h2,h3{font-family:'Space Grotesk',Inter,sans-serif;margin:0}
+.title{font-size:58px;line-height:1.05;letter-spacing:-.025em;margin:14px 0 14px;font-weight:700}
+.title.sm{font-size:46px;margin:10px 0 6px}
+.lead{font-size:24px;line-height:1.55;color:var(--soft);margin:0;max-width:1180px}
+.muted{color:var(--muted)}
+.grad{background:linear-gradient(100deg,#22d3ee,#a78bfa 50%,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mono{font-family:'JetBrains Mono',monospace}
+b,strong{color:var(--text);font-weight:600}
+.hl{color:var(--acc,var(--cyan));font-weight:600}
+
+/* ---------- components ---------- */
+.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid var(--line);border-radius:22px;padding:26px 28px;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(140deg,color-mix(in srgb,var(--c,var(--cyan)) 60%,transparent),transparent 45%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.card h3{font-size:26px;margin:0 0 10px;display:flex;align-items:center;gap:12px}
+.card p{font-size:19.5px;line-height:1.55;color:var(--soft);margin:0}
+.card ul{margin:0;padding-left:20px}
+.card li{font-size:19px;line-height:1.55;color:var(--soft);margin:4px 0}
+.ic{width:1em;height:1em;flex:none}
+.badge-ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:color-mix(in srgb,var(--c,var(--cyan)) 14%,transparent);color:var(--c,var(--cyan));border:1px solid color-mix(in srgb,var(--c,var(--cyan)) 35%,transparent);flex:none}
+.badge-ic .ic{width:30px;height:30px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:17px;color:var(--soft)}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--cyan));box-shadow:0 0 12px var(--c,var(--cyan))}
+.row{display:flex;gap:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.quote{border-left:3px solid var(--acc,var(--cyan));padding:6px 0 6px 24px;font-size:26px;line-height:1.5;color:var(--text);font-family:'Space Grotesk';max-width:1200px}
+.num{font:700 15px 'JetBrains Mono';color:var(--c,var(--cyan));width:34px;height:34px;border-radius:50%;display:inline-grid;place-items:center;border:1.5px solid currentColor;flex:none}
+.btn{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);padding:12px 22px;border-radius:12px;font-size:17px;font-weight:600;transition:.25s}
+.btn:hover{background:rgba(255,255,255,.12)}
+.btn.on{background:color-mix(in srgb,var(--c,var(--cyan)) 22%,transparent);border-color:var(--c,var(--cyan));color:#fff;box-shadow:0 0 24px color-mix(in srgb,var(--c,var(--cyan)) 30%,transparent)}
+.stack{display:flex;flex-direction:column;gap:18px}
+.callout{display:flex;gap:14px;align-items:flex-start;padding:16px 20px;border-radius:14px;background:color-mix(in srgb,var(--c,var(--amber)) 10%,transparent);border:1px solid color-mix(in srgb,var(--c,var(--amber)) 30%,transparent);font-size:18.5px;line-height:1.5;color:var(--soft)}
+.callout .ic{width:24px;height:24px;color:var(--c,var(--amber));margin-top:2px}
+
+/* ---------- diagrams (svg) ---------- */
+svg.dg{width:100%;height:100%;overflow:visible}
+.dg text{font-family:Inter,sans-serif}
+.nlabel{font-size:14px;fill:#c9d3ea;font-weight:500}
+.glabel{font-size:12.5px;fill:#8a97b8;letter-spacing:.14em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.elabel{font-size:12.5px;font-weight:600;paint-order:stroke;stroke:#070b18;stroke-width:5px;stroke-linejoin:round;font-family:'JetBrains Mono',monospace}
+.grp-r{fill:rgba(255,255,255,.025);stroke:rgba(148,163,210,.35);stroke-width:1.4;stroke-dasharray:6 6}
+.grp-r.solid{stroke-dasharray:none;fill:rgba(255,255,255,.035)}
+.edge{fill:none;stroke-width:2.3;stroke-dasharray:7 7;animation:dash 1.1s linear infinite;opacity:.9}
+.edge.dash{stroke-dasharray:3 7;animation-duration:2.2s;opacity:.6}
+@keyframes dash{to{stroke-dashoffset:-28}}
+.pkt{filter:drop-shadow(0 0 6px currentColor)}
+.node use{filter:drop-shadow(0 0 10px rgba(0,0,0,.4))}
+.node.is-new use{filter:drop-shadow(0 0 14px currentColor)}
+.halo{fill:none;stroke:#fbbf24;stroke-width:1.5;opacity:.7;transform-box:fill-box;transform-origin:center;animation:halo 2.2s ease-out infinite}
+@keyframes halo{0%{transform:scale(.8);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+.newbadge rect{fill:#fbbf24}
+.newbadge text{font:700 10.5px 'JetBrains Mono';fill:#1a1300;text-anchor:middle;letter-spacing:.08em}
+.tag{fill:rgba(167,139,250,.12);stroke:#a78bfa;stroke-width:1.2}
+.tagtxt{font-size:13px;fill:#ddd6fe;text-anchor:middle;font-weight:600}
+.is-new .tag{stroke:#fbbf24;fill:rgba(251,191,36,.12)}
+.is-new .tagtxt{fill:#fde68a}
+.edge-g.is-new .edge{stroke-width:3}
+
+/* ---------- HUD ---------- */
+.hud{position:absolute;left:96px;right:96px;bottom:30px;display:flex;justify-content:space-between;align-items:center;z-index:5;font:500 14px 'JetBrains Mono';color:var(--muted);letter-spacing:.06em}
+.hud-l{display:flex;align-items:center;gap:12px}
+.hud-l .dot{width:9px;height:9px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.35}}
+.hud-l b{color:var(--text);font-weight:600}
+.hud-r{display:flex;align-items:center;gap:12px}
+.hud-r button{cursor:pointer;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:20px;line-height:1;transition:.2s}
+.hud-r button:hover{background:rgba(255,255,255,.12)}
+.progress{position:absolute;left:0;right:0;top:0;height:4px;background:rgba(255,255,255,.05);z-index:5}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));box-shadow:0 0 16px var(--violet);transition:width .6s var(--ease)}
+.stepdots{display:flex;gap:6px;margin-right:6px}
+.stepdots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.18);transition:.3s}
+.stepdots i.on{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+
+#notes{position:fixed;left:50%;bottom:18px;transform:translate(-50%,140%);width:min(1100px,94vw);z-index:20;background:rgba(10,14,32,.94);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:20px 26px;font-size:17px;line-height:1.6;color:#d6def0;backdrop-filter:blur(14px);transition:transform .5s var(--ease);max-height:40vh;overflow:auto}
+#notes.open{transform:translate(-50%,0)}
+#notes h4{margin:0 0 8px;font:600 13px 'JetBrains Mono';letter-spacing:.2em;color:var(--amber);text-transform:uppercase}
+.notes{display:none}
+#help{position:fixed;right:18px;top:16px;z-index:20;font:500 12px 'JetBrains Mono';color:var(--muted);opacity:.7;letter-spacing:.05em}
+
+/* ---------- title slide ---------- */
+.s-title{display:grid;grid-template-columns:1.15fr .85fr;align-items:center;gap:40px}
+.s-title h1{font-size:92px;line-height:.98;letter-spacing:-.04em;font-weight:700;margin:22px 0 26px}
+.s-title .sub{font-size:24px;color:var(--soft);line-height:1.5;max-width:780px}
+.presenter{display:flex;align-items:center;gap:18px;margin-top:46px}
+.avatar{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;font:700 24px 'Space Grotesk';background:conic-gradient(from 180deg,#22d3ee,#a78bfa,#f472b6,#22d3ee);position:relative}
+.avatar::after{content:"AS";position:absolute;inset:3px;border-radius:50%;background:#0a0f22;display:grid;place-items:center}
+.presenter .who small{display:block;font:500 13px 'JetBrains Mono';letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.presenter .who span{font:600 30px 'Space Grotesk'}
+.credit{margin-top:22px;font-size:16px;color:var(--muted)}
+.orbit{position:relative;width:560px;height:560px;margin:auto}
+.ring{position:absolute;inset:0;margin:auto;border-radius:50%;border:1px dashed rgba(148,163,210,.28);animation:spin var(--d) linear infinite}
+.ring.r1{width:560px;height:560px;--d:60s}
+.ring.r2{width:390px;height:390px;--d:40s;animation-direction:reverse}
+.ring.r3{width:230px;height:230px;--d:26s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sat{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--a)) translateY(calc(var(--r) * -1))}
+.sat > div{position:absolute;width:64px;height:64px;left:-32px;top:-32px;border-radius:18px;display:grid;place-items:center;background:rgba(12,18,40,.9);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);color:var(--c);box-shadow:0 0 30px color-mix(in srgb,var(--c) 25%,transparent);animation:unspin var(--d) linear infinite}
+.ring.r2 .sat > div{animation-direction:reverse}
+.sat .ic{width:34px;height:34px}
+@keyframes unspin{from{transform:rotate(calc(-1 * var(--a)))}to{transform:rotate(calc(-1 * var(--a) - 360deg))}}
+.core{position:absolute;inset:0;margin:auto;width:150px;height:150px;border-radius:50%;display:grid;place-items:center;text-align:center;background:radial-gradient(circle,#1d2a5a,#0b1024 70%);border:1px solid rgba(167,139,250,.5);box-shadow:0 0 80px rgba(167,139,250,.35),inset 0 0 40px rgba(34,211,238,.2);animation:pulse 3s ease-in-out infinite}
+.core b{font:700 40px 'Space Grotesk';display:block;background:linear-gradient(100deg,#22d3ee,#f472b6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.core small{font:500 12px 'JetBrains Mono';letter-spacing:.2em;color:var(--muted)}
+@keyframes pulse{50%{box-shadow:0 0 120px rgba(167,139,250,.5),inset 0 0 40px rgba(34,211,238,.35)}}
+
+/* ---------- roadmap ---------- */
+.road .card{padding:24px;min-height:190px;transition:transform .3s}
+.road .card:hover{transform:translateY(-6px)}
+.road .n{font:700 15px 'JetBrains Mono';color:var(--c);letter-spacing:.1em}
+.road h3{font-size:24px;margin:14px 0 8px}
+.road p{font-size:17px}
+.road .badge-ic{position:absolute;right:20px;top:20px;width:46px;height:46px}
+
+/* ---------- divider ---------- */
+.divider{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:60px}
+.dv-num{font:700 330px/0.8 'Space Grotesk';letter-spacing:-.06em;color:transparent;-webkit-text-stroke:2px color-mix(in srgb,var(--acc) 70%,transparent);text-shadow:0 0 80px color-mix(in srgb,var(--acc) 30%,transparent)}
+.divider h1{font-size:104px;line-height:1;letter-spacing:-.035em;margin:18px 0 22px}
+.divider .lead{font-size:27px;max-width:760px}
+.dv-icon{width:240px;height:240px;color:var(--acc);filter:drop-shadow(0 0 40px var(--acc))}
+.slide.active .dv-icon.anim{animation:rise .9s var(--ease) forwards,bob 5s ease-in-out 1.2s infinite;animation-delay:.5s,1.4s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+.dv-bar{height:4px;width:0;background:linear-gradient(90deg,var(--acc),transparent);margin-top:34px;border-radius:4px}
+.slide.active .dv-bar{animation:bar 1.2s var(--ease) .6s forwards}
+@keyframes bar{to{width:520px}}
+
+/* ---------- specific ---------- */
+.code{font:500 21px/1.75 'JetBrains Mono',monospace;background:#0a0f22;border:1px solid var(--line);border-radius:18px;padding:24px 28px;position:relative;white-space:pre;color:#cbd5e1;margin:0}
+.code .k{color:#c084fc}.code .f{color:#22d3ee}.code .s{color:#a3e635}.code .n{color:#fbbf24}.code .c{color:#5f6d8d;font-style:italic}
+.code-h{display:flex;gap:8px;margin-bottom:14px}
+.code-h i{width:12px;height:12px;border-radius:50%;background:#fb7185}.code-h i:nth-child(2){background:#fbbf24}.code-h i:nth-child(3){background:#34d399}
+.code-h span{margin-left:10px;font-size:13px;color:var(--muted);letter-spacing:.08em}
+
+.toggle{display:flex;gap:12px}
+.rt .m-hit,.rt .m-miss{transition:opacity .5s}
+.rt.mode-hit .m-miss{opacity:0}
+.rt.mode-miss .m-hit{opacity:0}
+.rt-desc > div{display:none}
+.rt.mode-hit .rt-desc .d-hit,.rt.mode-miss .rt-desc .d-miss{display:block}
+
+/* TTL */
+.ttl input{width:100%;accent-color:#fbbf24;height:28px}
+.meter{height:14px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden;margin:6px 0 14px}
+.meter i{display:block;height:100%;border-radius:8px;transition:width .3s}
+.ttl-verdict{font:600 19px 'Space Grotesk';padding:10px 14px;border-radius:10px;background:rgba(255,255,255,.05);text-align:center}
+
+/* LRU */
+.lru-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0}
+.slot{height:96px;border-radius:16px;border:1.5px dashed rgba(255,255,255,.18);display:grid;place-items:center;font:700 40px 'Space Grotesk';color:var(--amber);position:relative;background:rgba(255,255,255,.02);transition:.3s}
+.slot.fill{border-style:solid;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.07)}
+.slot.fresh{animation:fresh .6s var(--ease)}
+@keyframes fresh{0%{transform:scale(.6);opacity:0}100%{transform:none;opacity:1}}
+.slot.hitflash{box-shadow:0 0 0 2px #34d399,0 0 30px rgba(52,211,153,.5)}
+.slot small{position:absolute;bottom:8px;font:500 11px 'JetBrains Mono';color:var(--muted);letter-spacing:.1em}
+.lru-seq{display:flex;gap:8px;flex-wrap:wrap}
+.lru-seq span{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font:600 18px 'JetBrains Mono';background:rgba(255,255,255,.05);color:var(--muted);transition:.3s}
+.lru-seq span.cur{background:var(--amber);color:#1a1300;transform:translateY(-4px)}
+.lru-seq span.done{color:#cbd5e1}
+.lru-status{font:600 22px 'Space Grotesk';min-height:34px}
+.lru-status .hit{color:var(--green)}.lru-status .miss{color:var(--red)}
+.evicted{display:inline-block;padding:2px 12px;border-radius:8px;background:rgba(251,113,133,.15);color:var(--red);animation:evict 1.2s var(--ease)}
+@keyframes evict{0%{transform:translateX(-30px);opacity:0}100%{transform:none;opacity:1}}
+
+/* SPOF */
+.spof{display:flex;align-items:center;justify-content:center;gap:26px;height:180px}
+.spof .one{color:var(--amber);position:relative}
+.spof .one::after{content:"";position:absolute;inset:-18px;border:3px solid var(--red);border-radius:50%;animation:alarm 1.4s infinite}
+@keyframes alarm{50%{opacity:.2;transform:scale(1.1)}}
+
+/* CDN race */
+.race{display:flex;flex-direction:column;gap:26px}
+.lane{display:grid;grid-template-columns:170px 1fr 90px;align-items:center;gap:18px;font-size:18px}
+.lane .track{height:20px;border-radius:12px;background:rgba(255,255,255,.06);position:relative;overflow:hidden}
+.lane .track i{position:absolute;inset:0 auto 0 0;border-radius:12px;width:0}
+.slide.active .lane.o .track i{background:linear-gradient(90deg,#fb7185,#f97316);animation:raceO 3s linear infinite}
+.slide.active .lane.c .track i{background:linear-gradient(90deg,#22d3ee,#34d399);animation:raceC 3s linear infinite}
+@keyframes raceO{0%{width:0}40%{width:100%}100%{width:100%}}
+@keyframes raceC{0%{width:0}13.3%{width:33.3%}100%{width:33.3%}}
+.lane b{font:700 22px 'JetBrains Mono'}
+
+/* stateful etc */
+.cdn-steps{display:flex;flex-direction:column;gap:12px}
+.cdn-steps > div{display:flex;gap:14px;align-items:flex-start;font-size:18.5px;line-height:1.45;color:var(--soft)}
+
+/* DC */
+.dcwrap .when-outage{opacity:0;transition:opacity .6s}
+.dcwrap .when-normal{transition:opacity .6s}
+.dcwrap.outage .when-outage{opacity:1}
+.dcwrap.outage .when-normal{opacity:0}
+.dcwrap .dc2{transition:opacity .7s,filter .7s}
+.dcwrap.outage .dc2{opacity:.14;filter:grayscale(1)}
+.dcwrap.outage .geo2 .edge{stroke:#fb7185 !important;animation:none;stroke-dasharray:3 6}
+.dcwrap.outage .geo2 .pkt{display:none}
+.dcwrap .dc-d > div{display:none}
+.dcwrap:not(.outage) .dc-d .dn,.dcwrap.outage .dc-d .do{display:block}
+
+/* MQ */
+.mq-flow{display:grid;grid-template-columns:260px 1fr 260px;align-items:center;gap:0}
+.mq-box{padding:26px;border-radius:20px;text-align:center;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.mq-box .ic{width:64px;height:64px}
+.mq-box h3{font-size:24px;margin:8px 0 4px}
+.mq-box small{color:var(--muted);font-size:15px}
+.mq-mid{position:relative;height:150px;display:flex;align-items:center}
+.pipe{position:relative;height:88px;margin:0 20px;flex:1;border-radius:14px 44px 44px 14px;border:2px solid rgba(167,139,250,.6);background:rgba(167,139,250,.07);overflow:hidden}
+.pipe .env{position:absolute;top:22px;width:56px;height:42px;left:-70px;color:var(--violet);animation:travel 4.5s linear infinite}
+.pipe .env svg{width:100%;height:100%}
+@keyframes travel{to{left:105%}}
+.mq-arrow{position:absolute;font:600 14px 'JetBrains Mono';color:var(--violet);letter-spacing:.1em}
+.sim{display:grid;grid-template-columns:250px 1fr 360px;gap:26px;align-items:stretch}
+.qlane{display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;min-height:120px;padding:14px;border-radius:14px;border:2px solid rgba(167,139,250,.5);background:rgba(167,139,250,.05);transition:border-color .4s,background .4s}
+.qlane.hot{border-color:#fb7185;background:rgba(251,113,133,.08)}
+.qjob{width:58px;height:44px;border-radius:8px;display:grid;place-items:center;text-align:center;font:600 11.5px/1.25 'JetBrains Mono';color:#ddd6fe;background:rgba(167,139,250,.22);border:1px solid rgba(167,139,250,.6)}
+.qjob.in{animation:fresh .35s var(--ease)}
+.workers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.wk{height:84px;border-radius:12px;border:1px solid rgba(163,230,53,.35);background:rgba(163,230,53,.05);display:grid;place-items:center;text-align:center;font:600 13px 'JetBrains Mono';color:#d9f99d;position:relative;transition:background .3s,box-shadow .3s}
+.wk.busy{background:rgba(163,230,53,.15);box-shadow:0 0 18px rgba(163,230,53,.25)}
+.wk .ic{width:26px;height:26px;color:var(--lime)}
+.wk .bar{position:absolute;left:8px;right:8px;bottom:6px;height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.wk .bar i{display:block;height:100%;background:var(--lime);width:0}
+.wk.busy .bar i{animation:work 1.5s linear forwards}
+@keyframes work{to{width:100%}}
+.big{font:700 44px 'Space Grotesk'}
+.simstat{font:600 18px 'Space Grotesk';padding:12px 16px;border-radius:12px;background:rgba(255,255,255,.05);min-height:52px}
+
+/* logging */
+.logs{height:170px;overflow:hidden;font:500 13.5px/1.9 'JetBrains Mono';color:#94a3b8;mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent)}
+.logs > div{animation:scrollup 12s linear infinite}
+@keyframes scrollup{to{transform:translateY(-50%)}}
+.logs .e{color:#fb7185}.logs .w{color:#fbbf24}.logs .i{color:#34d399}
+.spark path.l{fill:none;stroke:var(--cyan);stroke-width:3;stroke-dasharray:600;stroke-dashoffset:600}
+.slide.active .spark path.l{animation:draw 3s var(--ease) .6s forwards}
+.spark path.a{fill:url(#sg);opacity:0}
+.slide.active .spark path.a{animation:fadein 1s 2.4s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+.pipeline{display:flex;flex-direction:column;gap:10px}
+.pipeline span{padding:10px 14px;border-radius:10px;border:1px solid rgba(52,211,153,.3);font:600 15px 'JetBrains Mono';color:#a7f3d0;background:rgba(52,211,153,.05)}
+.slide.active .pipeline span{animation:stage 4s infinite;animation-delay:calc(var(--k)*1s)}
+@keyframes stage{0%,20%{background:rgba(52,211,153,.3);box-shadow:0 0 20px rgba(52,211,153,.35)}30%,100%{background:rgba(52,211,153,.05);box-shadow:none}}
+
+/* scaling */
+.vs{display:grid;grid-template-columns:1fr 60px 1.3fr;align-items:end;height:250px;gap:20px}
+.vsv{display:flex;justify-content:center;align-items:flex-end;height:100%}
+.vsv .ic{width:150px;height:200px;color:var(--lime);transform-origin:bottom;animation:grow 2.6s ease-in-out infinite alternate}
+@keyframes grow{from{transform:scale(.45)}to{transform:scale(1.08)}}
+.vsh{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-self:center}
+.vsh .ic{width:64px;height:78px;color:var(--lime);opacity:0;animation:popin 5s infinite;animation-delay:calc(var(--k)*.3s)}
+@keyframes popin{0%{opacity:0;transform:scale(.5)}10%,85%{opacity:1;transform:none}100%{opacity:0}}
+.vs .vsx{font:700 28px 'Space Grotesk';color:var(--muted);align-self:center;text-align:center}
+
+.shards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.shard{border-radius:18px;padding:16px;background:rgba(34,211,238,.05);border:1.5px solid rgba(34,211,238,.28);transition:.35s;min-height:250px}
+.shard h4{margin:0 0 10px;font:600 20px 'Space Grotesk';display:flex;align-items:center;gap:10px;color:var(--cyan)}
+.shard h4 .ic{width:28px;height:28px}
+.shard.hit{border-color:var(--amber);background:rgba(251,191,36,.1);box-shadow:0 0 40px rgba(251,191,36,.25);transform:translateY(-6px)}
+.shard table{width:100%;border-collapse:collapse;font:500 15px 'JetBrains Mono'}
+.shard th{text-align:left;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line);padding:4px 6px;font-size:13px}
+.shard td{padding:3px 6px;color:#cbd5e1}
+.shard tr.new td{color:var(--amber);animation:fresh .5s}
+.hashbox{display:flex;align-items:center;gap:18px;justify-content:center;margin:6px 0 22px}
+.hashbox .diamond{padding:14px 30px;border:2px solid var(--cyan);border-radius:14px;font:600 26px 'JetBrains Mono';background:rgba(34,211,238,.06);transform:skewX(-8deg)}
+.hashbox input{width:130px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:#0a0f22;color:#fff;font:600 20px 'JetBrains Mono'}
+.hres{font:600 22px 'JetBrains Mono';color:var(--amber);min-width:380px}
+
+.heat{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:end;height:170px}
+.heat div{border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#22d3ee,#0e7490);position:relative;height:var(--h)}
+.heat div.hot{background:linear-gradient(180deg,#fb7185,#b91c1c);animation:hot 1s ease-in-out infinite alternate}
+@keyframes hot{to{box-shadow:0 0 40px rgba(251,113,133,.7)}}
+.heat div span{position:absolute;bottom:-26px;left:0;right:0;text-align:center;font:500 13px 'JetBrains Mono';color:var(--muted)}
+
+/* summary */
+.take{display:grid;grid-template-columns:1fr 1fr;gap:16px 26px}
+.take > div{display:flex;align-items:center;gap:18px;padding:18px 22px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line);font:600 24px 'Space Grotesk'}
+.take .ck{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(52,211,153,.14);color:var(--green);flex:none}
+.take .ck svg{width:22px;height:22px}
+.take .shown .ck path{stroke-dasharray:30;stroke-dashoffset:30;animation:ck .5s .2s forwards}
+@keyframes ck{to{stroke-dashoffset:0}}
+
+.timeline{position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:26px 22px;margin-top:30px}
+.tl{padding:22px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.035);position:relative}
+.tl .k{font:600 13px 'JetBrains Mono';letter-spacing:.14em;color:var(--muted)}
+.tl h4{font:600 22px 'Space Grotesk';margin:8px 0 0}
+.tl.p1{opacity:.55}
+.tl.p2{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.07)}
+.tl.p2 .k{color:var(--violet)}
+
+.thanks{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;height:100%}
+.thanks h1{font-size:150px;letter-spacing:-.05em;line-height:1}
+.arch-l{display:grid;grid-template-columns:1fr 430px;gap:40px;align-items:center;height:640px}
+.arch-l .dgbox{height:620px}
+.arch-l .dgbox svg{height:620px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<canvas id="net"></canvas>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div id="help">← → navigate · N notes · F fullscreen</div>
+
+<!-- ============ ICON SYMBOLS & MARKERS ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+  <symbol id="i-server" viewBox="0 0 64 64"><rect x="15" y="4" width="34" height="56" rx="6" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5"/><path d="M23 15h18M23 45h18M23 52h18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="41" cy="26" r="2.6" fill="currentColor"/></symbol>
+  <symbol id="i-db" viewBox="0 0 64 64"><path d="M12 14v36c0 4 9 8 20 8s20-4 20-8V14" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5"/><ellipse cx="32" cy="14" rx="20" ry="7" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="2.5"/><path d="M12 32c0 4 9 8 20 8s20-4 20-8" fill="none" stroke="currentColor" stroke-width="2.5"/></symbol>
+  <symbol id="i-nosql" viewBox="0 0 64 64"><path d="M12 14v36c0 4 9 8 20 8s20-4 20-8V14" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5"/><ellipse cx="32" cy="14" rx="20" ry="7" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="2.5"/><text x="32" y="45" text-anchor="middle" font-size="19" font-weight="700" fill="currentColor" font-family="JetBrains Mono,monospace">{ }</text></symbol>
+  <symbol id="i-cache" viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="40" rx="8" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5"/><path d="M35 18 24 34h9l-4 12 11-16h-9z" fill="currentColor"/><path d="M17 5v7M27 5v7M37 5v7M47 5v7M17 52v7M27 52v7M37 52v7M47 52v7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 64 64"><rect x="12" y="12" width="40" height="28" rx="3" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><path d="M5 46h54l-4 7H9z" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 64 64"><rect x="19" y="5" width="26" height="54" rx="6" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><path d="M28 51h8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><ellipse cx="32" cy="32" rx="11" ry="25" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 24h48M8 40h48" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 64 64"><path d="M18 50a12 12 0 0 1-1-24 16 16 0 0 1 31-3 11 11 0 0 1 2 27z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M35 26 27 38h7l-3 9 9-13h-7z" fill="currentColor"/></symbol>
+  <symbol id="i-lb" viewBox="0 0 64 64"><path d="M8 14h48l-7 38H15z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 20v24M32 30l-9 9M32 30l9 9" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/></symbol>
+  <symbol id="i-queue" viewBox="0 0 64 64"><path d="M4 18h50l6 14-6 14H4z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><g fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="25" width="12" height="14" rx="1.5"/><path d="m9 26 6 6 6-6"/><rect x="24" y="25" width="12" height="14" rx="1.5"/><path d="m24 26 6 6 6-6"/><rect x="39" y="25" width="12" height="14" rx="1.5"/><path d="m39 26 6 6 6-6"/></g></symbol>
+  <symbol id="i-env" viewBox="0 0 64 48"><rect x="3" y="3" width="58" height="42" rx="6" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="3"/><path d="m4 6 28 20L60 6" fill="none" stroke="currentColor" stroke-width="3"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 64 64"><path d="M8 56h48" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="12" y="34" width="9" height="18" rx="2" fill="currentColor" fill-opacity=".5"/><rect x="27" y="22" width="9" height="30" rx="2" fill="currentColor" fill-opacity=".7"/><rect x="42" y="10" width="9" height="42" rx="2" fill="currentColor"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 64 64"><path d="M32 4c10 8 14 20 12 34H20C18 24 22 12 32 4z" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><circle cx="32" cy="24" r="5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M20 38l-8 10h12M44 38l8 10H40M27 46l5 12 5-12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 64 64"><path d="M32 8 58 22 32 36 6 22z" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="m6 32 26 14 26-14M6 42l26 14 26-14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-log" viewBox="0 0 64 64"><rect x="10" y="6" width="44" height="52" rx="6" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="2.5"/><path d="M19 20h26M19 30h26M19 40h16" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 64 64"><circle cx="32" cy="32" r="9" fill="none" stroke="currentColor" stroke-width="3"/><path d="M32 6v9M32 49v9M6 32h9M49 32h9M13.6 13.6l6.4 6.4M44 44l6.4 6.4M13.6 50.4l6.4-6.4M44 20l6.4-6.4" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="18" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3 2 21h20z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 64 64"><circle cx="32" cy="32" r="25" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><path d="M32 16v16l11 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 64 64"><path d="M50 26A19 19 0 0 0 15 22M14 38a19 19 0 0 0 35 4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M13 10v12h12M51 54V42H39" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 64 64"><path d="M32 5 54 13v17c0 14-9 24-22 29C19 54 10 44 10 30V13z" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/><path d="m22 32 7 7 13-14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 64 64"><ellipse cx="32" cy="18" rx="20" ry="8" fill="currentColor" fill-opacity=".25" stroke="currentColor" stroke-width="2.5"/><path d="M12 18v28c0 4.4 9 8 20 8s20-3.6 20-8V18M12 32c0 4.4 9 8 20 8s20-3.6 20-8" fill="none" stroke="currentColor" stroke-width="2.5"/></symbol>
+  <symbol id="i-key" viewBox="0 0 64 64"><circle cx="20" cy="32" r="11" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-width="2.5"/><path d="M31 32h26M49 32v9M41 32v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 64 64"><path d="m32 6 7.6 16.2 17.4 2.2-12.8 12.2 3.2 17.4L32 45.6 16.6 54l3.2-17.4L7 24.4l17.4-2.2z" fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-join" viewBox="0 0 64 64"><circle cx="24" cy="32" r="16" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/><circle cx="40" cy="32" r="16" fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="2.5"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 64 64"><path d="M36 4 12 36h18l-4 24 26-34H34z" fill="currentColor" fill-opacity=".2" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></symbol>
+
+  <marker id="ah-cyan" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#22d3ee"/></marker>
+  <marker id="ah-lime" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#a3e635"/></marker>
+  <marker id="ah-violet" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#a78bfa"/></marker>
+  <marker id="ah-pink" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#f472b6"/></marker>
+  <marker id="ah-amber" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#fbbf24"/></marker>
+  <marker id="ah-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#fb7185"/></marker>
+  <marker id="ah-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#34d399"/></marker>
+  <marker id="ah-muted" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#7c8db5"/></marker>
+  <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22d3ee" stop-opacity=".35"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></linearGradient>
+</defs>
+</svg>
+
+<div id="deck">
+<div class="progress"><i id="bar"></i></div>
+
+<!-- ============ 1. TITLE ============ -->
+<section class="slide s-title" data-section="Intro">
+  <div>
+    <div class="kicker anim">System Design Interview · Chapter 1 · Part II</div>
+    <h1 class="anim">Scale From Zero<br>To <span class="grad">Millions</span><br>of Users</h1>
+    <p class="sub anim">Cache · CDN · Stateless Web Tier · Data Centers · Message Queues · Logging &amp; Automation · Database Sharding</p>
+    <div class="presenter anim">
+      <div class="avatar"></div>
+      <div class="who"><small>Presented by</small><span>Abolfazl Soltani</span></div>
+    </div>
+    <div class="credit anim">Based on <i>System Design Interview – An Insider's Guide</i> by Alex Xu</div>
+  </div>
+  <div class="orbit anim pop">
+    <div class="ring r1">
+      <div class="sat" style="--a:0deg;--r:280px;--c:var(--amber);--d:60s"><div><svg class="ic"><use href="#i-cache"/></svg></div></div>
+      <div class="sat" style="--a:90deg;--r:280px;--c:var(--cyan);--d:60s"><div><svg class="ic"><use href="#i-cloud"/></svg></div></div>
+      <div class="sat" style="--a:180deg;--r:280px;--c:var(--pink);--d:60s"><div><svg class="ic"><use href="#i-nosql"/></svg></div></div>
+      <div class="sat" style="--a:270deg;--r:280px;--c:var(--violet);--d:60s"><div><svg class="ic"><use href="#i-queue"/></svg></div></div>
+    </div>
+    <div class="ring r2">
+      <div class="sat" style="--a:45deg;--r:195px;--c:var(--lime);--d:40s"><div><svg class="ic"><use href="#i-server"/></svg></div></div>
+      <div class="sat" style="--a:165deg;--r:195px;--c:var(--cyan);--d:40s"><div><svg class="ic"><use href="#i-db"/></svg></div></div>
+      <div class="sat" style="--a:285deg;--r:195px;--c:var(--muted);--d:40s"><div><svg class="ic"><use href="#i-globe"/></svg></div></div>
+    </div>
+    <div class="ring r3"></div>
+    <div class="core"><div><b>10⁶+</b><small>USERS</small></div></div>
+  </div>
+  <div class="notes">Welcome everyone. I'm Abolfazl Soltani. Today we continue Chapter 1 of Alex Xu's book: how a system grows from a single server to millions of users. The first part got us to a load balancer plus database replication. In this part we add the pieces that make the system fast, resilient, and horizontally scalable.</div>
+</section>
+
+<!-- ============ 2. ROADMAP ============ -->
+<section class="slide" data-section="Roadmap">
+  <div class="kicker anim">Roadmap</div>
+  <h2 class="title anim">Eight building blocks for <span class="grad">massive scale</span></h2>
+  <div class="grid4 road" style="margin-top:34px">
+    <div class="card anim" style="--c:var(--amber)"><div class="badge-ic"><svg class="ic"><use href="#i-cache"/></svg></div><div class="n">01</div><h3>Cache</h3><p>Keep hot data in memory</p></div>
+    <div class="card anim" style="--c:var(--cyan)"><div class="badge-ic"><svg class="ic"><use href="#i-cloud"/></svg></div><div class="n">02</div><h3>CDN</h3><p>Serve static assets close to users</p></div>
+    <div class="card anim" style="--c:var(--lime)"><div class="badge-ic"><svg class="ic"><use href="#i-server"/></svg></div><div class="n">03</div><h3>Stateless Web Tier</h3><p>Move session state out of servers</p></div>
+    <div class="card anim" style="--c:var(--green)"><div class="badge-ic"><svg class="ic"><use href="#i-globe"/></svg></div><div class="n">04</div><h3>Data Centers</h3><p>GeoDNS routing &amp; failover</p></div>
+    <div class="card anim" style="--c:var(--violet)"><div class="badge-ic"><svg class="ic"><use href="#i-queue"/></svg></div><div class="n">05</div><h3>Message Queue</h3><p>Decouple &amp; process asynchronously</p></div>
+    <div class="card anim" style="--c:var(--pink)"><div class="badge-ic"><svg class="ic"><use href="#i-chart"/></svg></div><div class="n">06</div><h3>Logging, Metrics, Automation</h3><p>See and automate everything</p></div>
+    <div class="card anim" style="--c:var(--cyan)"><div class="badge-ic"><svg class="ic"><use href="#i-db"/></svg></div><div class="n">07</div><h3>Database Scaling</h3><p>Vertical vs. horizontal (sharding)</p></div>
+    <div class="card anim" style="--c:var(--amber)"><div class="badge-ic"><svg class="ic"><use href="#i-rocket"/></svg></div><div class="n">08</div><h3>Millions &amp; Beyond</h3><p>The scaling checklist</p></div>
+  </div>
+  <div class="notes">Here's the agenda. Each block solves a specific bottleneck. Notice the order: first we make reads fast (cache, CDN), then make the web tier elastic (stateless), then survive regional failures (data centers), decouple work (queues), gain visibility (logs/metrics), and finally scale the data tier itself (sharding).</div>
+</section>
+
+<!-- ============ 3. RECAP ============ -->
+<section class="slide" data-section="Recap">
+  <div class="kicker anim">Where we left off · Figure 1-6</div>
+  <h2 class="title sm anim">Load balancer + database replication</h2>
+  <div class="arch-l">
+    <div class="dgbox anim"><svg class="dg" data-arch="S0"></svg></div>
+    <div class="stack">
+      <div class="cdn-steps">
+        <div data-step="1"><span class="num">1</span><div>User gets the load balancer's IP from <b>DNS</b>.</div></div>
+        <div data-step="2"><span class="num">2</span><div>User connects to the <b>load balancer</b> with this IP.</div></div>
+        <div data-step="3"><span class="num">3</span><div>The HTTP request is routed to <b>Server 1 or Server 2</b>.</div></div>
+        <div data-step="4"><span class="num">4</span><div>Web servers <b>read</b> user data from a <b>slave</b> database.</div></div>
+        <div data-step="5"><span class="num">5</span><div>Any data-modifying operation (write, update, delete) goes to the <b>master</b>.</div></div>
+      </div>
+      <div class="callout" data-step="6" style="--c:var(--cyan)"><svg class="ic"><use href="#i-bolt"/></svg><div><b>Next goal:</b> improve load/response time by adding a <b>cache layer</b> and moving static content (JS/CSS/images/video) to a <b>CDN</b>.</div></div>
+    </div>
+  </div>
+  <div class="notes">Quick recap of where the first part ended. We have separated web and data tiers, a load balancer in front of two web servers, and master/slave replication. The system is now reasonably available — but every request still hits the database. That is our next problem.</div>
+</section>
+
+<!-- ============ 4. DIVIDER CACHE ============ -->
+<section class="slide divider" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="dv-num anim">01</div>
+  <div>
+    <div class="kicker anim">Section 01</div>
+    <h1 class="anim">Cache</h1>
+    <p class="lead anim">Store expensive responses and frequently accessed data in memory — so the next request is served in a fraction of the time.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-cache"/></svg>
+  <div class="notes">Section one: cache.</div>
+</section>
+
+<!-- ============ 5. WHAT IS CACHE ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="kicker anim">Cache · Definition</div>
+  <h2 class="title anim">What is a cache?</h2>
+  <p class="quote anim">A cache is a <span class="hl">temporary storage area</span> that stores the result of expensive responses or frequently accessed data <span class="hl">in memory</span>, so that subsequent requests are served more quickly.</p>
+  <div class="grid2" style="margin-top:44px">
+    <div class="card anim" style="--c:var(--red)">
+      <h3><span class="badge-ic" style="--c:var(--red)"><svg class="ic"><use href="#i-warn"/></svg></span>The problem</h3>
+      <p>Every time a new web page loads, <b>one or more database calls</b> are executed to fetch data. Calling the database repeatedly <b>greatly affects application performance</b>.</p>
+    </div>
+    <div class="card anim" style="--c:var(--green)">
+      <h3><span class="badge-ic" style="--c:var(--green)"><svg class="ic"><use href="#i-check"/></svg></span>The fix</h3>
+      <p>Put a <b>cache</b> between the web servers and the database. Repeated reads are answered from memory, and the database only sees the requests the cache can't serve.</p>
+    </div>
+  </div>
+  <div class="notes">Key idea: the database is the expensive part. If a thousand users request the same profile, we shouldn't run the same query a thousand times. Memory is much faster than disk-backed databases, so we keep the hot results there.</div>
+</section>
+
+<!-- ============ 6. CACHE TIER ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="kicker anim">Cache tier · Figure 1-7</div>
+  <h2 class="title sm anim">A separate cache tier — read-through strategy</h2>
+  <div class="row anim" style="margin:14px 0 6px">
+    <span class="chip" style="--c:var(--green)"><i></i>Better system performance</span>
+    <span class="chip" style="--c:var(--cyan)"><i></i>Reduced database workload</span>
+    <span class="chip" style="--c:var(--violet)"><i></i>Scale the cache tier independently</span>
+  </div>
+  <div class="rt mode-hit" id="rt">
+    <div class="anim" style="height:330px;margin-top:10px"><svg class="dg" data-arch="RT"></svg></div>
+    <div class="row anim" style="align-items:center;justify-content:space-between;margin-top:10px">
+      <div class="toggle">
+        <button class="btn on" style="--c:var(--green)" data-rt="hit">Cache hit</button>
+        <button class="btn" style="--c:var(--red)" data-rt="miss">Cache miss</button>
+      </div>
+      <div class="rt-desc lead" style="font-size:21px;max-width:960px">
+        <div class="d-hit">Data <b>exists</b> in cache → the web server reads it from the cache and returns it. <b>No database call.</b></div>
+        <div class="d-miss">Data <b>not</b> in cache → query the database, <b>store the response in the cache</b>, then return it to the client.</div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">The cache tier is a temporary data store layer, much faster than the database. Walk through both cases with the toggle. This pattern — check cache first, on miss load from DB and populate cache — is called read-through. Other strategies exist depending on data type, size, and access patterns.</div>
+</section>
+
+<!-- ============ 7. CODE ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="kicker anim">Cache · API</div>
+  <h2 class="title sm anim">Talking to a cache is simple</h2>
+  <p class="lead anim">Most cache servers expose APIs for common programming languages. Typical <b>Memcached</b> API:</p>
+  <div class="grid2" style="margin-top:28px;align-items:start">
+    <div class="anim">
+<pre class="code"><div class="code-h"><i></i><i></i><i></i><span>memcached — from the book</span></div><span class="n">SECONDS</span> = <span class="n">1</span>
+<span class="f">cache.set</span>(<span class="s">'myKey'</span>, <span class="s">'hi there'</span>, <span class="n">3600</span> * <span class="n">SECONDS</span>)
+<span class="f">cache.get</span>(<span class="s">'myKey'</span>)</pre>
+      <div class="stack" style="margin-top:22px">
+        <div class="callout" style="--c:var(--cyan)"><svg class="ic"><use href="#i-key"/></svg><div><b>set(key, value, ttl)</b> — store a value that expires after 3600 s (1 hour).</div></div>
+        <div class="callout" style="--c:var(--green)"><svg class="ic"><use href="#i-bolt"/></svg><div><b>get(key)</b> — returns the value, or nothing if it's missing/expired.</div></div>
+      </div>
+    </div>
+    <div class="anim">
+<pre class="code"><div class="code-h"><i></i><i></i><i></i><span>read-through, in practice (illustration)</span></div><span class="k">def</span> <span class="f">get_user</span>(user_id):
+    key = <span class="s">f"user:{user_id}"</span>
+    user = <span class="f">cache.get</span>(key)
+    <span class="k">if</span> user <span class="k">is None</span>:        <span class="c"># cache miss</span>
+        user = <span class="f">db.query_user</span>(user_id)
+        <span class="f">cache.set</span>(key, user, <span class="n">3600</span>)
+    <span class="k">return</span> user             <span class="c"># hit or filled</span></pre>
+    </div>
+  </div>
+  <div class="notes">The left snippet is exactly the book's example. On the right is how read-through looks in application code — this is my illustration to connect it with the previous slide, not from the book.</div>
+</section>
+
+<!-- ============ 8. CONSIDERATIONS 1 ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="kicker anim">Considerations for using cache · 1/3</div>
+  <h2 class="title sm anim">When to cache, and for how long?</h2>
+  <div class="grid3" style="margin-top:28px">
+    <div class="card anim" style="--c:var(--cyan)">
+      <h3><span class="badge-ic"><svg class="ic"><use href="#i-info"/></svg></span>When to use</h3>
+      <ul>
+        <li>Data is <b>read frequently</b> but <b>modified infrequently</b>.</li>
+        <li>Cache lives in <b>volatile memory</b> — if the cache server restarts, all data is lost.</li>
+        <li>Important data must be saved in <b>persistent data stores</b>.</li>
+      </ul>
+    </div>
+    <div class="card anim ttl" style="--c:var(--amber)">
+      <h3><span class="badge-ic" style="--c:var(--amber)"><svg class="ic"><use href="#i-clock"/></svg></span>Expiration policy</h3>
+      <p style="font-size:17px;margin-bottom:12px">Expired data is removed. Without a policy, data stays in memory forever. Drag the TTL:</p>
+      <input type="range" min="1" max="100" value="50" id="ttl">
+      <div style="display:flex;justify-content:space-between;font:500 13px 'JetBrains Mono';color:var(--muted)"><span>short TTL</span><span>long TTL</span></div>
+      <div style="font-size:15px;margin-top:10px">Reloads from DB</div><div class="meter"><i id="mDb" style="background:#fb7185"></i></div>
+      <div style="font-size:15px">Risk of stale data</div><div class="meter"><i id="mSt" style="background:#fbbf24"></i></div>
+      <div class="ttl-verdict" id="ttlV">Balanced ✓</div>
+    </div>
+    <div class="card anim" style="--c:var(--violet)">
+      <h3><span class="badge-ic" style="--c:var(--violet)"><svg class="ic"><use href="#i-sync"/></svg></span>Consistency</h3>
+      <ul>
+        <li>Keep the <b>data store and cache in sync</b>.</li>
+        <li>Inconsistency happens because data-modifying operations on the store and the cache are <b>not in a single transaction</b>.</li>
+        <li>Across <b>multiple regions</b> it's challenging — see <i>“Scaling Memcache at Facebook”</i>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes">Three considerations. One: only cache read-heavy, rarely-changing data, and never treat the cache as the source of truth. Two: expiration — use the slider: too short means we keep reloading from the database; too long means users see stale data. Three: consistency — updating DB and cache isn't atomic, so they can drift, especially across regions.</div>
+</section>
+
+<!-- ============ 9. SPOF ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)">
+  <div class="kicker anim">Considerations for using cache · 2/3</div>
+  <h2 class="title sm anim">Mitigating failures — avoid the SPOF</h2>
+  <p class="quote anim" style="margin-top:16px">“A <span class="hl">single point of failure</span> (SPOF) is a part of a system that, if it fails, will stop the entire system from working.”</p>
+  <div class="grid2" style="margin-top:36px">
+    <div class="card anim" style="--c:var(--red)">
+      <h3 style="color:var(--red)">✕ One cache server</h3>
+      <div class="spof">
+        <svg class="ic" style="width:70px;height:70px;color:var(--lime)"><use href="#i-server"/></svg>
+        <span style="font-size:30px;color:var(--muted)">→</span>
+        <div class="one"><svg class="ic" style="width:90px;height:90px"><use href="#i-cache"/></svg></div>
+        <span style="font-size:30px;color:var(--muted)">→</span>
+        <svg class="ic" style="width:70px;height:70px;color:var(--cyan)"><use href="#i-db"/></svg>
+      </div>
+      <p>If it goes down, every request suddenly hits the database.</p>
+    </div>
+    <div class="card anim" style="--c:var(--green)">
+      <h3 style="color:var(--green)">✓ Recommended</h3>
+      <div class="spof">
+        <svg class="ic" style="width:70px;height:70px;color:var(--amber)"><use href="#i-cache"/></svg>
+        <svg class="ic" style="width:70px;height:70px;color:var(--amber)"><use href="#i-cache"/></svg>
+        <svg class="ic" style="width:70px;height:70px;color:var(--amber)"><use href="#i-cache"/></svg>
+      </div>
+      <ul>
+        <li><b>Multiple cache servers</b> across <b>different data centers</b>.</li>
+        <li><b>Overprovision</b> the required memory by a certain percentage — a buffer as memory usage grows.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="notes">A single cache server is a single point of failure — the book's example is a single router in front of an application server. The fix: several cache servers spread over data centers, and overprovision memory so growth doesn't push us into constant eviction.</div>
+</section>
+
+<!-- ============ 10. EVICTION ============ -->
+<section class="slide" data-section="01 · Cache" style="--acc:var(--amber)" data-demo="lru">
+  <div class="kicker anim">Considerations for using cache · 3/3</div>
+  <h2 class="title sm anim">Eviction policy — what leaves when the cache is full?</h2>
+  <p class="lead anim">Once the cache is full, adding an item may remove an existing one. This is called <b>cache eviction</b>.</p>
+  <div class="grid2" style="grid-template-columns:1.35fr 1fr;margin-top:26px">
+    <div class="card anim" style="--c:var(--amber)">
+      <h3>LRU live demo <span class="muted" style="font-size:16px;font-weight:500">· capacity = 4</span></h3>
+      <div class="lru-seq" id="lruSeq"></div>
+      <div class="lru-slots" id="lruSlots"></div>
+      <div style="display:flex;justify-content:space-between;font:500 13px 'JetBrains Mono';color:var(--muted);margin-top:-6px;margin-bottom:12px"><span>← most recently used</span><span>least recently used →</span></div>
+      <div class="lru-status" id="lruStatus"></div>
+    </div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--amber);padding:20px 24px"><h3 style="font-size:22px">LRU · Least Recently Used</h3><p>Evict the item that hasn't been accessed for the longest time. <b>The most popular policy.</b></p></div>
+      <div class="card anim" style="--c:var(--cyan);padding:20px 24px"><h3 style="font-size:22px">LFU · Least Frequently Used</h3><p>Evict the item with the fewest accesses.</p></div>
+      <div class="card anim" style="--c:var(--violet);padding:20px 24px"><h3 style="font-size:22px">FIFO · First In, First Out</h3><p>Evict the oldest inserted item, regardless of usage.</p></div>
+    </div>
+  </div>
+  <div class="notes">The demo runs the access sequence through an LRU cache of size four. A hit moves the key to the front. A miss on a full cache kicks out the rightmost — least recently used — key. LFU and FIFO are alternatives for different use cases.</div>
+</section>
+
+<!-- ============ 11. DIVIDER CDN ============ -->
+<section class="slide divider" data-section="02 · CDN" style="--acc:var(--cyan)">
+  <div class="dv-num anim">02</div>
+  <div>
+    <div class="kicker anim">Section 02</div>
+    <h1 class="anim">Content Delivery Network</h1>
+    <p class="lead anim">A network of geographically dispersed servers that deliver static content from the location closest to the user.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-cloud"/></svg>
+  <div class="notes">Section two: CDN.</div>
+</section>
+
+<!-- ============ 12. CDN WHAT ============ -->
+<section class="slide" data-section="02 · CDN" style="--acc:var(--cyan)">
+  <div class="kicker anim">CDN · How it works · Figure 1-9</div>
+  <h2 class="title sm anim">Closer servers → faster pages</h2>
+  <div class="grid2" style="grid-template-columns:1fr 1.1fr;margin-top:24px;gap:40px">
+    <div class="stack">
+      <div class="card anim"><p>CDN servers cache <b>static content</b>: images, videos, CSS, JavaScript files, etc.</p>
+        <div class="row" style="flex-wrap:wrap;gap:10px;margin-top:14px"><span class="chip"><i></i>.png / .jpg</span><span class="chip" style="--c:var(--pink)"><i></i>.mp4</span><span class="chip" style="--c:var(--violet)"><i></i>.css</span><span class="chip" style="--c:var(--amber)"><i></i>.js</span></div>
+      </div>
+      <div class="card anim" style="--c:var(--violet)"><p>When a user visits a website, <b>the CDN server closest to the user</b> delivers the static content. The further the user is from CDN servers, the slower the site loads.</p></div>
+      <div class="callout anim" style="--c:var(--muted)"><svg class="ic"><use href="#i-info"/></svg><div><b>Dynamic content caching</b> (HTML pages based on path, query strings, cookies, headers) exists but is <b>beyond the scope</b> of the book.</div></div>
+    </div>
+    <div class="card anim" style="padding:34px">
+      <h3 style="margin-bottom:6px">Example</h3>
+      <p style="margin-bottom:30px">CDN servers in <b>San Francisco</b> → users in <b>Los Angeles</b> get content faster than users in <b>Europe</b>.</p>
+      <div class="race">
+        <div class="lane o"><span>Client → Origin</span><div class="track"><i></i></div><b style="color:#fb7185">120ms</b></div>
+        <div class="lane c"><span>Client → CDN</span><div class="track"><i></i></div><b style="color:#34d399">40ms</b></div>
+      </div>
+      <p style="margin-top:30px;font-size:17px" class="muted">The CDN edge answers ~3× faster than the distant origin server.</p>
+    </div>
+  </div>
+  <div class="notes">The CDN is essentially a geographically distributed cache for static files. The race shows the book's example numbers: 120 milliseconds to the origin versus 40 to a nearby CDN edge.</div>
+</section>
+
+<!-- ============ 13. CDN WORKFLOW ============ -->
+<section class="slide" data-section="02 · CDN" style="--acc:var(--cyan)">
+  <div class="kicker anim">CDN workflow · Figure 1-10</div>
+  <h2 class="title sm anim">Step by step: image.png</h2>
+  <div class="grid2" style="grid-template-columns:1.25fr 1fr;gap:36px;margin-top:12px;align-items:center">
+    <div class="anim" style="height:560px"><svg class="dg" data-arch="CDNW"></svg></div>
+    <div class="cdn-steps">
+      <div data-step="1"><span class="num">1</span><div>User A requests image.png via a URL whose domain is provided by the CDN provider:<br><span class="mono" style="font-size:14px;color:var(--cyan)">mysite.cloudfront.net/logo.jpg<br>mysite.akamai.com/image-manager/img/logo.jpg</span></div></div>
+      <div data-step="2"><span class="num">2</span><div>Not in the CDN cache → the CDN requests the file from the <b>origin</b> (a web server or storage like Amazon S3).</div></div>
+      <div data-step="3"><span class="num" style="--c:var(--lime)">3</span><div>Origin returns image.png with an optional HTTP header <b>Time-to-Live (TTL)</b> — how long it stays cached.</div></div>
+      <div data-step="4"><span class="num" style="--c:var(--lime)">4</span><div>CDN caches the image and returns it to User A. It stays cached <b>until the TTL expires</b>.</div></div>
+      <div data-step="5"><span class="num">5</span><div>User B requests the same image.</div></div>
+      <div data-step="6"><span class="num" style="--c:var(--lime)">6</span><div>The image is returned <b>from the cache</b> as long as the TTL hasn't expired.</div></div>
+    </div>
+  </div>
+  <div class="notes">Step through with the arrow key — each press reveals one step on the diagram and in the list. The key point: only the first request goes to the origin; every following request within the TTL is served by the edge.</div>
+</section>
+
+<!-- ============ 14. CDN CONSIDERATIONS ============ -->
+<section class="slide" data-section="02 · CDN" style="--acc:var(--cyan)">
+  <div class="kicker anim">Considerations of using a CDN</div>
+  <h2 class="title sm anim">Four things to get right</h2>
+  <div class="grid2" style="margin-top:28px">
+    <div class="card" data-step="1" style="--c:var(--amber)"><h3><span class="badge-ic" style="--c:var(--amber)"><svg class="ic"><use href="#i-coin"/></svg></span>Cost</h3><p>CDNs are run by third-party providers and you're <b>charged for data transfers in and out</b>. Caching infrequently used assets gives no real benefit — move them out of the CDN.</p></div>
+    <div class="card" data-step="2" style="--c:var(--cyan)"><h3><span class="badge-ic"><svg class="ic"><use href="#i-clock"/></svg></span>Appropriate cache expiry</h3><p>For time-sensitive content, expiry should be <b>neither too long</b> (content no longer fresh) <b>nor too short</b> (repeated reloading from origin to CDN).</p></div>
+    <div class="card" data-step="3" style="--c:var(--green)"><h3><span class="badge-ic" style="--c:var(--green)"><svg class="ic"><use href="#i-shield"/></svg></span>CDN fallback</h3><p>Plan for CDN failure. During a temporary outage, clients should <b>detect the problem and request resources from the origin</b>.</p></div>
+    <div class="card" data-step="4" style="--c:var(--violet)"><h3><span class="badge-ic" style="--c:var(--violet)"><svg class="ic"><use href="#i-sync"/></svg></span>Invalidating files</h3><p>Remove a file before it expires by:</p><ul><li>Invalidating the object via the <b>CDN vendor's API</b></li><li><b>Object versioning</b>: <span class="mono" style="color:var(--violet)">image.png?v=2</span></li></ul></div>
+  </div>
+  <div class="notes">Reveal one card at a time. Cost — you pay for transfer, so don't put cold assets there. Expiry — same trade-off as cache TTL. Fallback — the CDN itself can fail. Invalidation — either call the vendor API or change the URL with a version parameter so clients fetch the new file.</div>
+</section>
+
+<!-- ============ 15. ARCH A ============ -->
+<section class="slide" data-section="02 · CDN" style="--acc:var(--cyan)">
+  <div class="kicker anim">Updated design · Figure 1-11</div>
+  <h2 class="title sm anim">After adding the CDN and the cache</h2>
+  <div class="arch-l">
+    <div class="dgbox anim"><svg class="dg" data-arch="SA"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--cyan)"><h3><span class="num">1</span>CDN</h3><p>Static assets (JS, CSS, images, etc.) are <b>no longer served by web servers</b>. They're fetched from the CDN for better performance.</p></div>
+      <div class="card anim" style="--c:var(--amber)"><h3><span class="num" style="--c:var(--amber)">2</span>Cache</h3><p>The <b>database load is lightened</b> by caching data.</p></div>
+    </div>
+  </div>
+  <div class="notes">This is the architecture after the first two sections. The new components are marked NEW and pulse. Web servers now talk to the cache first; users fetch static files from the CDN directly.</div>
+</section>
+
+<!-- ============ 16. DIVIDER STATELESS ============ -->
+<section class="slide divider" data-section="03 · Stateless Web Tier" style="--acc:var(--lime)">
+  <div class="dv-num anim">03</div>
+  <div>
+    <div class="kicker anim">Section 03</div>
+    <h1 class="anim">Stateless Web Tier</h1>
+    <p class="lead anim">To scale the web tier horizontally, move state (e.g. user session data) out of the web servers.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-server"/></svg>
+  <div class="notes">Section three: stateless web tier. Store session data in persistent storage such as a relational database or NoSQL; each web server in the cluster can access it. That's a stateless web tier.</div>
+</section>
+
+<!-- ============ 17. STATEFUL ============ -->
+<section class="slide" data-section="03 · Stateless Web Tier" style="--acc:var(--lime)">
+  <div class="kicker anim">Stateful architecture · Figure 1-12</div>
+  <h2 class="title sm anim">A stateful server remembers the client between requests</h2>
+  <div class="grid2" style="grid-template-columns:1.55fr 1fr;gap:36px;margin-top:14px;align-items:center">
+    <div class="anim" style="height:560px"><svg class="dg" data-arch="SF"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--lime)"><p><b>Stateful</b> server: remembers client data (state) from one request to the next.<br><b>Stateless</b> server: keeps <b>no</b> state information.</p></div>
+      <div class="card anim" style="--c:var(--red)"><p>User A's session lives on <b>Server 1</b>. A request routed to Server 2 → <b style="color:var(--red)">authentication fails</b>. So every request from the same client must hit the same server.</p></div>
+      <div class="card" data-step="1" style="--c:var(--amber)"><h3 style="font-size:22px">Sticky sessions help… but</h3><ul><li>Add overhead to the load balancer</li><li><b>Adding / removing servers</b> is much harder</li><li><b>Server failures</b> are hard to handle</li></ul></div>
+    </div>
+  </div>
+  <div class="notes">In a stateful setup, User A's session and profile image are stored on Server 1 only. If the load balancer sends A to Server 2, authentication fails. Load balancers can use sticky sessions, but then you can't freely add or remove servers or survive a server crash.</div>
+</section>
+
+<!-- ============ 18. STATELESS ============ -->
+<section class="slide" data-section="03 · Stateless Web Tier" style="--acc:var(--lime)">
+  <div class="kicker anim">Stateless architecture · Figure 1-13</div>
+  <h2 class="title sm anim">Any request → any server</h2>
+  <div class="grid2" style="grid-template-columns:1.2fr 1fr;gap:40px;margin-top:14px;align-items:center">
+    <div class="anim" style="height:560px"><svg class="dg" data-arch="SL"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--violet)"><p>HTTP requests from users can be sent to <b>any web server</b>, which fetches state data from a <b>shared data store</b>.</p></div>
+      <div class="card anim" style="--c:var(--lime)"><p>State is stored in the shared store and <b>kept out of web servers</b>.</p></div>
+      <div class="grid3 anim" style="gap:12px">
+        <div class="card" style="padding:18px;text-align:center;--c:var(--green)"><b style="font-size:20px">Simpler</b></div>
+        <div class="card" style="padding:18px;text-align:center;--c:var(--cyan)"><b style="font-size:20px">More robust</b></div>
+        <div class="card" style="padding:18px;text-align:center;--c:var(--violet)"><b style="font-size:20px">Scalable</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">Now the servers are interchangeable. Whichever server gets the request fetches the session from shared storage. This is what makes horizontal scaling and autoscaling trivial.</div>
+</section>
+
+<!-- ============ 19. ARCH B ============ -->
+<section class="slide" data-section="03 · Stateless Web Tier" style="--acc:var(--lime)">
+  <div class="kicker anim">Updated design · Figure 1-14</div>
+  <h2 class="title sm anim">Stateless web tier + auto scaling</h2>
+  <div class="arch-l">
+    <div class="dgbox anim"><svg class="dg" data-arch="SB"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--pink)"><h3>Session data → NoSQL</h3><p>The shared store could be a relational DB, Memcached/Redis, or NoSQL. <b>NoSQL is chosen because it is easy to scale.</b></p></div>
+      <div class="card anim" style="--c:var(--lime)"><h3><span class="num" style="--c:var(--lime)">1</span>Auto scale</h3><p><b>Autoscaling</b> = adding or removing web servers automatically based on traffic load — easy once state is out of the web tier.</p></div>
+      <div class="callout anim" style="--c:var(--green)"><svg class="ic"><use href="#i-globe"/></svg><div>The site grows and attracts users <b>internationally</b> → supporting <b>multiple data centers</b> becomes crucial.</div></div>
+    </div>
+  </div>
+  <div class="notes">Session data moved to NoSQL. The web tier can now grow from two to four servers — or shrink — automatically. Next, as users come from all over the world, one data center is no longer enough.</div>
+</section>
+
+<!-- ============ 20. DIVIDER DC ============ -->
+<section class="slide divider" data-section="04 · Data Centers" style="--acc:var(--green)">
+  <div class="dv-num anim">04</div>
+  <div>
+    <div class="kicker anim">Section 04</div>
+    <h1 class="anim">Data Centers</h1>
+    <p class="lead anim">Improve availability and user experience across wider geographical areas.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-globe"/></svg>
+  <div class="notes">Section four: multiple data centers.</div>
+</section>
+
+<!-- ============ 21. DC ============ -->
+<section class="slide" data-section="04 · Data Centers" style="--acc:var(--green)">
+  <div class="kicker anim">Data centers · Figures 1-15 &amp; 1-16</div>
+  <h2 class="title sm anim">GeoDNS routing — and failover</h2>
+  <div class="dcwrap" id="dcw">
+    <div class="grid2" style="grid-template-columns:1.35fr 1fr;gap:36px;align-items:center">
+      <div class="anim" style="height:630px"><svg class="dg" data-arch="DC"></svg></div>
+      <div class="stack">
+        <div class="card anim" style="--c:var(--green)"><p><b>geoDNS</b> resolves domain names to IP addresses <b>based on the user's location</b>, so users are routed to the closest data center.</p></div>
+        <div class="card anim dc-d" style="--c:var(--cyan)">
+          <div class="dn"><h3 style="font-size:22px">Normal operation</h3><p>Traffic is split: <b>x%</b> to US-East and <b>(100 – x)%</b> to US-West.</p></div>
+          <div class="do"><h3 style="font-size:22px;color:var(--red)">DC2 (US-West) is offline</h3><p>On a significant outage, we direct <b>100% of traffic</b> to the healthy data center (US-East).</p></div>
+        </div>
+        <button class="btn anim" id="dcBtn" style="--c:var(--red)">⚡ Simulate DC2 outage</button>
+      </div>
+    </div>
+  </div>
+  <div class="notes">Normally each user is geo-routed to the nearest data center. Press the button to simulate US-West going down: all traffic shifts to US-East. Press again to restore.</div>
+</section>
+
+<!-- ============ 22. DC CHALLENGES ============ -->
+<section class="slide" data-section="04 · Data Centers" style="--acc:var(--green)">
+  <div class="kicker anim">Multi-data center setup</div>
+  <h2 class="title sm anim">Technical challenges to solve</h2>
+  <div class="grid3" style="margin-top:30px">
+    <div class="card" data-step="1" style="--c:var(--green)"><span class="badge-ic" style="--c:var(--green)"><svg class="ic"><use href="#i-globe"/></svg></span><h3 style="margin-top:18px">Traffic redirection</h3><p>Effective tools are needed to direct traffic to the correct data center. <b>GeoDNS</b> routes users to the nearest one.</p></div>
+    <div class="card" data-step="2" style="--c:var(--cyan)"><span class="badge-ic"><svg class="ic"><use href="#i-sync"/></svg></span><h3 style="margin-top:18px">Data synchronization</h3><p>Users in different regions may use different local databases or caches. In failover, traffic may land where <b>data is unavailable</b>. Common strategy: <b>replicate data across data centers</b> (e.g. Netflix's asynchronous multi-DC replication).</p></div>
+    <div class="card" data-step="3" style="--c:var(--violet)"><span class="badge-ic" style="--c:var(--violet)"><svg class="ic"><use href="#i-gear"/></svg></span><h3 style="margin-top:18px">Test &amp; deployment</h3><p>Test your website/application <b>at different locations</b>. <b>Automated deployment tools</b> keep services consistent across all data centers.</p></div>
+  </div>
+  <div class="callout" data-step="4" style="margin-top:30px;--c:var(--violet)"><svg class="ic"><use href="#i-queue"/></svg><div>To scale further we need to <b>decouple components</b> so they scale independently — the <b>message queue</b> is the key strategy used by many real-world distributed systems.</div></div>
+  <div class="notes">Three challenges: getting traffic to the right place, keeping data in sync so failover actually works, and deploying consistently everywhere. Then transition: to keep scaling, we decouple components — message queues.</div>
+</section>
+
+<!-- ============ 23. DIVIDER MQ ============ -->
+<section class="slide divider" data-section="05 · Message Queue" style="--acc:var(--violet)">
+  <div class="dv-num anim">05</div>
+  <div>
+    <div class="kicker anim">Section 05</div>
+    <h1 class="anim">Message Queue</h1>
+    <p class="lead anim">A durable component, stored in memory, that supports asynchronous communication.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-queue"/></svg>
+  <div class="notes">Section five: message queue.</div>
+</section>
+
+<!-- ============ 24. MQ BASICS ============ -->
+<section class="slide" data-section="05 · Message Queue" style="--acc:var(--violet)">
+  <div class="kicker anim">Message queue · Figure 1-17</div>
+  <h2 class="title sm anim">Producers publish, consumers subscribe</h2>
+  <p class="lead anim">It serves as a <b>buffer</b> and distributes asynchronous requests.</p>
+  <div class="mq-flow anim" style="margin-top:40px">
+    <div class="mq-box" style="border-color:rgba(34,211,238,.4)"><svg class="ic" style="color:var(--cyan)"><use href="#i-server"/></svg><h3>Producer</h3><small>a.k.a. publisher — creates messages</small></div>
+    <div class="mq-mid">
+      <span class="mq-arrow" style="top:6px;left:30px">publish →</span>
+      <div class="pipe">
+        <div class="env" style="animation-delay:0s"><svg><use href="#i-env"/></svg></div>
+        <div class="env" style="animation-delay:-1.5s"><svg><use href="#i-env"/></svg></div>
+        <div class="env" style="animation-delay:-3s"><svg><use href="#i-env"/></svg></div>
+      </div>
+      <span class="mq-arrow" style="bottom:6px;right:30px">→ consume</span>
+    </div>
+    <div class="mq-box" style="border-color:rgba(163,230,53,.4)"><svg class="ic" style="color:var(--lime)"><use href="#i-server"/></svg><h3>Consumer</h3><small>a.k.a. subscriber — performs the action</small></div>
+  </div>
+  <div class="grid2" style="margin-top:44px">
+    <div class="card" data-step="1" style="--c:var(--cyan)"><h3 style="font-size:22px">Consumer is down?</h3><p>The producer can still <b>post messages to the queue</b>.</p></div>
+    <div class="card" data-step="2" style="--c:var(--lime)"><h3 style="font-size:22px">Producer is down?</h3><p>The consumer can still <b>read messages from the queue</b>.</p></div>
+  </div>
+  <div class="callout" data-step="3" style="margin-top:22px;--c:var(--violet)"><svg class="ic"><use href="#i-layers"/></svg><div><b>Decoupling</b> makes the message queue a preferred architecture for building <b>scalable and reliable</b> applications.</div></div>
+  <div class="notes">Producers create messages and publish them to the queue; consumers connect and perform actions defined by the messages. Because they don't talk directly, either side can be unavailable without breaking the other.</div>
+</section>
+
+<!-- ============ 25. MQ SIM ============ -->
+<section class="slide" data-section="05 · Message Queue" style="--acc:var(--violet)" data-demo="mq">
+  <div class="kicker anim">Use case · Figure 1-18</div>
+  <h2 class="title sm anim">Photo processing — scale each side independently</h2>
+  <p class="lead anim" style="font-size:21px">Cropping, sharpening, blurring… take time. Web servers publish jobs; workers pick them up and process them <b>asynchronously</b>.</p>
+  <div class="sim" style="margin-top:30px">
+    <div class="mq-box anim" style="border-color:rgba(34,211,238,.4);display:flex;flex-direction:column;justify-content:center">
+      <svg class="ic" style="color:var(--cyan);margin:auto"><use href="#i-server"/></svg><h3>Web servers</h3><small>Producer · 2 jobs / s</small>
+    </div>
+    <div class="anim">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><b style="font:600 18px 'JetBrains Mono';color:var(--violet)">queue for photo processing</b><span class="muted">length <span class="big" id="mqLen" style="color:var(--text)">0</span></span></div>
+      <div class="qlane" id="mqQ"></div>
+      <div class="simstat" id="mqStat" style="margin-top:16px"></div>
+    </div>
+    <div class="anim">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <b style="font:600 18px 'JetBrains Mono';color:var(--lime)">photo workers</b>
+        <div class="row" style="gap:8px"><button class="btn" id="wkMinus" style="padding:8px 16px">−</button><span class="big" id="wkN" style="font-size:30px;min-width:34px;text-align:center">2</span><button class="btn" id="wkPlus" style="padding:8px 16px">+</button></div>
+      </div>
+      <div class="workers" id="mqW"></div>
+      <p class="muted" style="font-size:15px;margin-top:12px">Each worker: ~0.67 jobs / s</p>
+    </div>
+  </div>
+  <div class="notes">Live simulation. Producers publish two jobs per second. With two workers the queue keeps growing — press plus to add workers until it drains. If it's empty most of the time, remove workers to save cost. That's the book's point: producers and consumers scale independently.</div>
+</section>
+
+<!-- ============ 26. DIVIDER LOGGING ============ -->
+<section class="slide divider" data-section="06 · Logging, Metrics, Automation" style="--acc:var(--pink)">
+  <div class="dv-num anim">06</div>
+  <div>
+    <div class="kicker anim">Section 06</div>
+    <h1 class="anim">Logging, Metrics &amp; Automation</h1>
+    <p class="lead anim">Nice-to-have for a small site on a few servers — <b>essential</b> once it serves a large business.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-chart"/></svg>
+  <div class="notes">Section six: operational tooling.</div>
+</section>
+
+<!-- ============ 27. LOGGING ============ -->
+<section class="slide" data-section="06 · Logging, Metrics, Automation" style="--acc:var(--pink)">
+  <div class="kicker anim">Operate at scale</div>
+  <h2 class="title sm anim">See it, measure it, automate it</h2>
+  <div class="grid3" style="margin-top:28px">
+    <div class="card anim" style="--c:var(--amber)">
+      <h3><span class="badge-ic" style="--c:var(--amber)"><svg class="ic"><use href="#i-log"/></svg></span>Logging</h3>
+      <p>Monitoring <b>error logs</b> helps identify errors and problems. Monitor per server, or <b>aggregate to a centralized service</b> for easy search and viewing.</p>
+      <div class="logs" style="margin-top:14px"><div>
+        <div><span class="i">INFO</span> web-2 GET /feed 200 38ms</div><div><span class="w">WARN</span> cache-1 eviction rate high</div><div><span class="i">INFO</span> web-1 POST /photo 202</div><div><span class="e">ERROR</span> web-3 db timeout shard-2</div><div><span class="i">INFO</span> worker-4 job 8812 done</div><div><span class="w">WARN</span> lb-1 slow upstream web-3</div><div><span class="i">INFO</span> web-2 GET /user/42 200</div><div><span class="e">ERROR</span> cdn fallback → origin</div>
+        <div><span class="i">INFO</span> web-2 GET /feed 200 38ms</div><div><span class="w">WARN</span> cache-1 eviction rate high</div><div><span class="i">INFO</span> web-1 POST /photo 202</div><div><span class="e">ERROR</span> web-3 db timeout shard-2</div><div><span class="i">INFO</span> worker-4 job 8812 done</div><div><span class="w">WARN</span> lb-1 slow upstream web-3</div><div><span class="i">INFO</span> web-2 GET /user/42 200</div><div><span class="e">ERROR</span> cdn fallback → origin</div>
+      </div></div>
+    </div>
+    <div class="card anim" style="--c:var(--cyan)">
+      <h3><span class="badge-ic"><svg class="ic"><use href="#i-chart"/></svg></span>Metrics</h3>
+      <p style="font-size:17.5px">Business insights + system health:</p>
+      <ul style="margin-top:6px"><li><b>Host level:</b> CPU, memory, disk I/O</li><li><b>Aggregated level:</b> DB tier, cache tier performance</li><li><b>Key business:</b> DAU, retention, revenue</li></ul>
+      <svg class="spark" viewBox="0 0 300 90" style="width:100%;height:90px;margin-top:10px"><path class="a" d="M0 70 L30 60 L60 64 L90 45 L120 50 L150 30 L180 38 L210 20 L240 26 L270 10 L300 14 L300 90 L0 90Z"/><path class="l" d="M0 70 L30 60 L60 64 L90 45 L120 50 L150 30 L180 38 L210 20 L240 26 L270 10 L300 14"/></svg>
+    </div>
+    <div class="card anim" style="--c:var(--green)">
+      <h3><span class="badge-ic" style="--c:var(--green)"><svg class="ic"><use href="#i-gear"/></svg></span>Automation</h3>
+      <p>Big, complex systems need automation tools. <b>Continuous integration</b> verifies every check-in, catching problems early. Automate <b>build, test, deploy</b> to boost productivity.</p>
+      <div class="pipeline" style="margin-top:16px"><span style="--k:0">① commit</span><span style="--k:1">② build</span><span style="--k:2">③ test</span><span style="--k:3">④ deploy</span></div>
+    </div>
+  </div>
+  <div class="notes">Logging tells you what went wrong. Metrics tell you how healthy the system and business are — at the host level, the tier level, and business KPIs. Automation — CI and automated build/test/deploy — lets the team move fast safely.</div>
+</section>
+
+<!-- ============ 28. ARCH C ============ -->
+<section class="slide" data-section="06 · Logging, Metrics, Automation" style="--acc:var(--pink)">
+  <div class="kicker anim">Updated design · Figure 1-19</div>
+  <h2 class="title sm anim">Adding message queues and tools</h2>
+  <div class="arch-l">
+    <div class="dgbox anim"><svg class="dg" data-arch="SC"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--violet)"><h3><span class="num" style="--c:var(--violet)">1</span>Message queue</h3><p>Makes the system more <b>loosely coupled</b> and <b>failure resilient</b>.</p></div>
+      <div class="card anim" style="--c:var(--pink)"><h3><span class="num" style="--c:var(--pink)">2</span>Tools</h3><p><b>Logging, monitoring, metrics, and automation</b> tools are included.</p></div>
+      <p class="muted anim" style="font-size:16px">Only one data center shown due to space.</p>
+      <div class="callout anim" style="--c:var(--red)"><svg class="ic"><use href="#i-warn"/></svg><div>Data grows every day and the database gets <b>overloaded</b> → time to <b>scale the data tier</b>.</div></div>
+    </div>
+  </div>
+  <div class="notes">Web servers now publish work to the queue; workers consume it. Tools wrap around the whole data center. But data keeps growing, and the database becomes the bottleneck.</div>
+</section>
+
+<!-- ============ 29. DIVIDER DB ============ -->
+<section class="slide divider" data-section="07 · Database Scaling" style="--acc:var(--cyan)">
+  <div class="dv-num anim">07</div>
+  <div>
+    <div class="kicker anim">Section 07</div>
+    <h1 class="anim">Database Scaling</h1>
+    <p class="lead anim">Two broad approaches: <b>vertical scaling</b> and <b>horizontal scaling</b>.</p>
+    <div class="dv-bar"></div>
+  </div>
+  <svg class="dv-icon anim"><use href="#i-db"/></svg>
+  <div class="notes">Section seven: database scaling.</div>
+</section>
+
+<!-- ============ 30. VERTICAL ============ -->
+<section class="slide" data-section="07 · Database Scaling" style="--acc:var(--cyan)">
+  <div class="kicker anim">Vertical vs. horizontal · Figure 1-20</div>
+  <h2 class="title sm anim">Scale up — or scale out?</h2>
+  <div class="grid2" style="grid-template-columns:1fr 1fr;gap:34px;margin-top:22px">
+    <div class="stack">
+      <div class="card anim" style="--c:var(--lime)">
+        <h3>Vertical scaling <span class="muted" style="font-size:17px;font-weight:500">· scaling up</span></h3>
+        <p>Add more power (<b>CPU, RAM, DISK</b>) to an existing machine.</p>
+        <div class="row" style="gap:14px;margin-top:16px">
+          <div class="card" style="padding:14px 18px;flex:1;--c:var(--amber)"><b class="big" style="font-size:34px;color:var(--amber)">24 TB</b><p style="font-size:15px">RAM on a single Amazon RDS database server</p></div>
+          <div class="card" style="padding:14px 18px;flex:1;--c:var(--cyan)"><b class="big" style="font-size:34px;color:var(--cyan)">10M+</b><p style="font-size:15px">monthly uniques on stackoverflow.com (2013) — with <b>1 master DB</b></p></div>
+        </div>
+      </div>
+      <div class="card" data-step="1" style="--c:var(--red)">
+        <h3 style="font-size:22px;color:var(--red)">Serious drawbacks</h3>
+        <ul><li><b>Hardware limits</b> — a single server isn't enough for a large user base</li><li>Greater risk of <b>single point of failure</b></li><li><b>High cost</b> — powerful servers are much more expensive</li></ul>
+      </div>
+    </div>
+    <div class="card anim" style="--c:var(--cyan);display:flex;flex-direction:column">
+      <div class="vs" style="flex:1">
+        <div class="vsv"><svg class="ic"><use href="#i-server"/></svg></div>
+        <div class="vsx">VS</div>
+        <div class="vsh">
+          <svg class="ic" style="--k:0"><use href="#i-server"/></svg><svg class="ic" style="--k:1"><use href="#i-server"/></svg><svg class="ic" style="--k:2"><use href="#i-server"/></svg><svg class="ic" style="--k:3"><use href="#i-server"/></svg>
+          <svg class="ic" style="--k:4"><use href="#i-server"/></svg><svg class="ic" style="--k:5"><use href="#i-server"/></svg><svg class="ic" style="--k:6"><use href="#i-server"/></svg><svg class="ic" style="--k:7"><use href="#i-server"/></svg>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:20px;gap:14px">
+        <div style="text-align:center"><b style="color:var(--lime);font-size:20px">Vertical</b><p style="font-size:16px">Bigger machine</p></div>
+        <div style="text-align:center"><b style="color:var(--cyan);font-size:20px">Horizontal · sharding</b><p style="font-size:16px">More servers</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">Vertical scaling works surprisingly far — Stack Overflow ran on one master in 2013 — but it hits hardware limits, is a SPOF, and gets expensive. Horizontal scaling, also known as sharding, adds more servers instead.</div>
+</section>
+
+<!-- ============ 31. SHARDING DEMO ============ -->
+<section class="slide" data-section="07 · Database Scaling" style="--acc:var(--cyan)" data-demo="shard">
+  <div class="kicker anim">Horizontal scaling · Figures 1-21 &amp; 1-22</div>
+  <h2 class="title sm anim">Sharding: split a large database into shards</h2>
+  <p class="lead anim" style="font-size:21px">Each shard shares the <b>same schema</b>, but the data on each shard is <b>unique</b>. A hash function picks the shard for every read/write.</p>
+  <div class="hashbox anim">
+    <input type="number" id="shIn" placeholder="user_id" min="0">
+    <button class="btn on" id="shGo">Route →</button>
+    <div class="diamond">user_id % 4</div>
+    <div class="hres" id="shRes"></div>
+  </div>
+  <div class="shards anim" id="shards"></div>
+  <div class="callout anim" style="margin-top:22px;--c:var(--amber)"><svg class="ic"><use href="#i-key"/></svg><div><b>Sharding key</b> (partition key): one or more columns that determine how data is distributed — here <span class="mono" style="color:var(--amber)">user_id</span>. It routes queries to the correct database. Choose a key that <b>distributes data evenly</b>.</div></div>
+  <div class="notes">The demo routes random user IDs automatically; you can also type one and press Route. user_id modulo 4 picks one of four shards. Emphasize: the most important decision is the sharding key, and it must spread data evenly.</div>
+</section>
+
+<!-- ============ 32. SHARDING CHALLENGES ============ -->
+<section class="slide" data-section="07 · Database Scaling" style="--acc:var(--cyan)">
+  <div class="kicker anim">Sharding is far from perfect</div>
+  <h2 class="title sm anim">New complexities and challenges</h2>
+  <div class="grid3" style="margin-top:28px">
+    <div class="card" data-step="1" style="--c:var(--amber)">
+      <span class="badge-ic" style="--c:var(--amber)"><svg class="ic"><use href="#i-sync"/></svg></span>
+      <h3 style="margin-top:16px">Resharding data</h3>
+      <p>Needed when <b>1)</b> a single shard can't hold more data due to rapid growth, or <b>2)</b> uneven distribution causes <b>shard exhaustion</b>. Requires updating the sharding function and moving data. <b>Consistent hashing</b> (Chapter 5) is the common fix.</p>
+    </div>
+    <div class="card" data-step="2" style="--c:var(--red)">
+      <span class="badge-ic" style="--c:var(--red)"><svg class="ic"><use href="#i-star"/></svg></span>
+      <h3 style="margin-top:16px">Celebrity problem</h3>
+      <p>a.k.a. <b>hotspot key</b>. Katy Perry, Justin Bieber and Lady Gaga all on one shard → that shard is overwhelmed with reads. Fix: <b>a shard per celebrity</b>, maybe further partitioned.</p>
+      <div class="heat" style="margin-top:18px;height:110px"><div style="--h:30%"><span>S0</span></div><div class="hot" style="--h:100%"><span>S1 🔥</span></div><div style="--h:36%"><span>S2</span></div><div style="--h:26%"><span>S3</span></div></div>
+    </div>
+    <div class="card" data-step="3" style="--c:var(--violet)">
+      <span class="badge-ic" style="--c:var(--violet)"><svg class="ic"><use href="#i-join"/></svg></span>
+      <h3 style="margin-top:16px">Join &amp; de-normalization</h3>
+      <p>Once sharded across servers, <b>joins across shards are hard</b>. Common workaround: <b>de-normalize</b> the database so queries can be performed in a single table.</p>
+    </div>
+  </div>
+  <div class="notes">Three challenges. Resharding when a shard fills or data is uneven — consistent hashing solves this later in chapter five. The celebrity or hotspot problem — one shard gets hammered. And joins — you can't easily join across servers, so we de-normalize.</div>
+</section>
+
+<!-- ============ 33. ARCH D ============ -->
+<section class="slide" data-section="07 · Database Scaling" style="--acc:var(--cyan)">
+  <div class="kicker anim">Updated design · Figure 1-23</div>
+  <h2 class="title sm anim">Sharded databases + NoSQL</h2>
+  <div class="arch-l">
+    <div class="dgbox anim"><svg class="dg" data-arch="SD"></svg></div>
+    <div class="stack">
+      <div class="card anim" style="--c:var(--cyan)"><h3><span class="num">1</span>Shards</h3><p>Databases are <b>sharded</b> to support rapidly increasing data traffic.</p></div>
+      <div class="card anim" style="--c:var(--pink)"><h3><span class="num" style="--c:var(--pink)">2</span>NoSQL</h3><p>Some <b>non-relational functionality</b> is moved to a NoSQL data store to <b>reduce database load</b>.</p></div>
+    </div>
+  </div>
+  <div class="notes">This is the final architecture of Chapter 1. Compare it with where we started today — every tier can now scale independently.</div>
+</section>
+
+<!-- ============ 34. JOURNEY ============ -->
+<section class="slide" data-section="08 · Millions & Beyond" style="--acc:var(--violet)">
+  <div class="kicker anim">The journey</div>
+  <h2 class="title sm anim">From a single server to millions of users</h2>
+  <div class="timeline">
+    <div class="tl p1 anim"><div class="k">PART I</div><h4>Single server</h4></div>
+    <div class="tl p1 anim"><div class="k">PART I</div><h4>Separate database</h4></div>
+    <div class="tl p1 anim"><div class="k">PART I</div><h4>Load balancer</h4></div>
+    <div class="tl p1 anim"><div class="k">PART I</div><h4>DB replication</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 01–02</div><h4>Cache + CDN</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 03</div><h4>Stateless web tier</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 04</div><h4>Multiple data centers</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 05</div><h4>Message queue</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 06</div><h4>Logs, metrics, automation</h4></div>
+    <div class="tl p2 anim"><div class="k">TODAY · 07</div><h4>Database sharding</h4></div>
+  </div>
+  <p class="lead anim" style="margin-top:40px">Scaling is an <b>iterative process</b>. Beyond millions of users you'll need more fine-tuning — e.g. optimizing and <b>decoupling the system into even smaller services</b>.</p>
+  <div class="notes">A quick look back at the whole path — the first four steps from the previous part, and the six we covered today. Beyond this point, the same ideas keep being applied, for example splitting into smaller services.</div>
+</section>
+
+<!-- ============ 35. SUMMARY ============ -->
+<section class="slide" data-section="08 · Millions & Beyond" style="--acc:var(--violet)">
+  <div class="kicker anim">Millions of users and beyond</div>
+  <h2 class="title anim">How we scale to <span class="grad">millions of users</span></h2>
+  <div class="take" style="margin-top:26px">
+    <div data-step="1"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Keep web tier stateless</div>
+    <div data-step="2"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Build redundancy at every tier</div>
+    <div data-step="3"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Cache data as much as you can</div>
+    <div data-step="4"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Support multiple data centers</div>
+    <div data-step="5"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Host static assets in CDN</div>
+    <div data-step="6"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Scale your data tier by sharding</div>
+    <div data-step="7"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Split tiers into individual services</div>
+    <div data-step="8"><span class="ck"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Monitor your system and use automation tools</div>
+  </div>
+  <div class="notes">The book's eight-point summary. Reveal one at a time and connect each to the section where we covered it.</div>
+</section>
+
+<!-- ============ 36. THANKS ============ -->
+<section class="slide" data-section="Q&A">
+  <div class="thanks">
+    <div class="kicker anim" style="justify-content:center">Thank you</div>
+    <h1 class="anim" style="margin:20px 0 10px"><span class="grad">Questions?</span></h1>
+    <p class="lead anim" style="text-align:center">Congratulations on getting this far — now give yourself a pat on the back. Good job!</p>
+    <div class="presenter anim" style="justify-content:center">
+      <div class="avatar"></div>
+      <div class="who" style="text-align:left"><small>Presented by</small><span>Abolfazl Soltani</span></div>
+    </div>
+    <div class="credit anim">Source: <i>System Design Interview – An Insider's Guide</i>, Alex Xu · Chapter 1</div>
+  </div>
+  <div class="notes">Thank the audience and open for questions.</div>
+</section>
+
+<div class="hud">
+  <div class="hud-l"><span class="dot"></span><b>Abolfazl Soltani</b><span>/</span><span id="hudSec"></span></div>
+  <div class="hud-r"><div class="stepdots" id="sdots"></div><button id="prevB" aria-label="Previous">‹</button><span id="count"></span><button id="nextB" aria-label="Next">›</button></div>
+</div>
+</div>
+
+<div id="notes"><h4>Speaker notes</h4><div id="notesBody"></div></div>
+
+<script>
+/* ================= DIAGRAM BUILDER ================= */
+const COL={cyan:'#22d3ee',lime:'#a3e635',violet:'#a78bfa',pink:'#f472b6',amber:'#fbbf24',red:'#fb7185',green:'#34d399',muted:'#7c8db5',text:'#e8eefc'};
+const ICO={server:['i-server','lime'],db:['i-db','cyan'],cache:['i-cache','amber'],laptop:['i-laptop','text'],phone:['i-phone','text'],dns:['i-globe','muted'],cdn:['i-cloud','cyan'],lb:['i-lb','violet'],mq:['i-queue','violet'],nosql:['i-nosql','pink']};
+const MULTI={cluster:'server',dbs:'db',caches:'cache'};
+
+function N(n){
+  if(n.t==='text') return `<text x="${n.x}" y="${n.y}" class="${n.cls||''}" text-anchor="${n.a||'middle'}" style="fill:${COL[n.c||'text']};font-size:${n.fs||14}px;font-weight:${n.fw||500}">${n.txt}</text>`;
+  if(n.t==='xmark') return `<g class="${n.cls||''}"><circle cx="${n.x}" cy="${n.y}" r="13" fill="#fb7185"/><path d="M${n.x-5} ${n.y-5}l10 10M${n.x+5} ${n.y-5}l-10 10" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></g>`;
+  const s=n.s||52; let body='';
+  if(n.t==='tag'){
+    body=`<rect x="${n.x-n.w/2}" y="${n.y-15}" width="${n.w}" height="30" rx="8" class="tag"/><text x="${n.x}" y="${n.y+5}" class="tagtxt">${n.l}</text>`;
+    return `<g class="node ${n.nw?'is-new':''} ${n.cls||''}">${body}</g>`;
+  }
+  if(MULTI[n.t]){
+    const [id,c]=ICO[MULTI[n.t]], k=s*0.8, off=[-k*0.6,0,k*0.6];
+    body=off.map((o,i)=>`<use href="#${id}" x="${n.x+o-k/2}" y="${n.y-k/2-(i===1?5:0)}" width="${k}" height="${k}" style="color:${COL[n.c||c]}"/>`).join('');
+  } else {
+    const [id,c]=ICO[n.t];
+    body=`<use href="#${id}" x="${n.x-s/2}" y="${n.y-s/2}" width="${s}" height="${s}" style="color:${COL[n.c||c]}"/>`;
+  }
+  let lab='';
+  if(n.l){
+    lab = n.lp==='r'
+      ? `<text x="${n.x+s/2+10}" y="${n.y+5}" class="nlabel" text-anchor="start">${n.l}</text>`
+      : `<text x="${n.x}" y="${n.y+s/2+18}" class="nlabel" text-anchor="middle">${n.l}</text>`;
+  }
+  const halo=n.nw?`<circle class="halo" cx="${n.x}" cy="${n.y}" r="${s*0.62}"/>`:'';
+  const badge=n.nw?`<g class="newbadge"><rect x="${n.x+s/2-12}" y="${n.y-s/2-14}" width="40" height="18" rx="9"/><text x="${n.x+s/2+8}" y="${n.y-s/2-1}">NEW</text></g>`:'';
+  return `<g class="node ${n.nw?'is-new':''} ${n.cls||''}" ${n.step?`data-step="${n.step}"`:''}>${halo}${body}${lab}${badge}</g>`;
+}
+function E(e){
+  const [x1,y1,x2,y2]=e.p, c=e.c||'cyan', col=COL[c];
+  const d=e.q?`M${x1} ${y1} Q${e.q[0]} ${e.q[1]} ${x2} ${y2}`:`M${x1} ${y1} L${x2} ${y2}`;
+  const mk=(e.noarrow?'':`marker-end="url(#ah-${c})"`)+(e.both?` marker-start="url(#ah-${c})"`:'');
+  let lab='';
+  if(e.l){
+    if(e.rot){
+      const mx=(x1+x2)/2, my=(y1+y2)/2; let a=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+      if(a>90) a-=180; if(a<-90) a+=180;
+      lab=`<text x="${mx}" y="${my+(e.lo??-9)}" transform="rotate(${a.toFixed(1)} ${mx} ${my})" class="elabel ${e.lcls||''}" text-anchor="middle" style="fill:${col}">${e.l}</text>`;
+    } else {
+      const lx=e.lx??(x1+x2)/2, ly=e.ly??((y1+y2)/2-8);
+      lab=`<text x="${lx}" y="${ly}" class="elabel ${e.lcls||''}" text-anchor="${e.la||'middle'}" style="fill:${col}">${e.l}</text>`;
+    }
+  }
+  const pk=(!e.dash&&!e.nopk)?`<circle r="4.2" class="pkt" fill="${col}" style="color:${col}"><animateMotion dur="${e.dur||2.2}s" repeatCount="indefinite" path="${d}"/></circle>`:'';
+  return `<g class="edge-g ${e.nw?'is-new':''} ${e.cls||''}" ${e.step?`data-step="${e.step}"`:''}><path d="${d}" class="edge ${e.dash?'dash':''}" stroke="${col}" ${mk}/>${pk}${lab}</g>`;
+}
+function G(g){return `<g class="grp ${g.cls||''}"><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="18" class="grp-r ${g.solid?'solid':''}"/>${g.l?`<text x="${g.x+14}" y="${g.y+22}" class="glabel">${g.l}</text>`:''}</g>`}
+function merge(...ps){const o={groups:[],edges:[],nodes:[]};ps.forEach(p=>{['groups','edges','nodes'].forEach(k=>{if(p[k])o[k]=o[k].concat(p[k])});if(p.vb)o.vb=p.vb});return o}
+
+const TOP=()=>({
+  groups:[{x:330,y:12,w:340,h:118,l:'User'}],
+  nodes:[{t:'laptop',x:440,y:60,s:48,l:'Web browser'},{t:'phone',x:560,y:60,s:48,l:'Mobile app'},{t:'dns',x:150,y:70,s:58,l:'DNS'},{t:'lb',x:500,y:200,s:52,l:'Load balancer',lp:'r'}],
+  edges:[{p:[330,70,186,70],c:'muted',both:true,nopk:true},{p:[455,130,490,172],l:'www.mysite.com',lx:462,ly:162,la:'end'},{p:[545,130,510,172],l:'api.mysite.com',lx:540,ly:162,la:'start',dur:2.6}]
+});
+const CDN=(nw)=>({nodes:[{t:'cdn',x:865,y:70,s:66,l:'CDN',nw}],edges:[{p:[670,70,824,70],c:'cyan',nw}]});
+
+const ARCH={};
+ARCH.S0=merge(TOP(),{vb:'60 0 900 600',
+  groups:[{x:360,y:262,w:280,h:112,l:'Web tier'},{x:300,y:452,w:400,h:136,l:'Data tier'}],
+  nodes:[{t:'server',x:440,y:308,l:'Server 1'},{t:'server',x:560,y:308,l:'Server 2'},{t:'db',x:400,y:514,s:56,l:'Master DB'},{t:'db',x:600,y:514,s:56,l:'Slave DB'}],
+  edges:[{p:[488,226,452,278]},{p:[512,226,548,278],dur:2.6},
+    {p:[430,364,398,480],l:'write',lx:392,ly:425,la:'end'},{p:[548,364,410,480],dur:2.8},
+    {p:[452,364,590,480],dash:true,l:'read',lx:612,ly:425,la:'start'},{p:[572,364,602,480],dash:true},
+    {p:[432,514,568,514],c:'muted',both:true,nopk:true,l:'Replicate',ly:503}]
+});
+ARCH.SA=merge(ARCH.S0,CDN(true),{vb:'60 0 900 600',
+  nodes:[{t:'cache',x:845,y:514,s:58,l:'Cache',nw:true}],
+  edges:[{p:[640,335,815,488],c:'lime',nw:true,l:'read / write cache',rot:true}]
+});
+ARCH.SB=merge(TOP(),CDN(false),{vb:'60 0 900 600',
+  groups:[{x:270,y:262,w:460,h:112,l:'Web tier · auto scale'},{x:150,y:452,w:500,h:136,l:'Data tier'}],
+  nodes:[{t:'server',x:345,y:310,l:'Server 1'},{t:'server',x:455,y:310,l:'Server 2'},{t:'server',x:565,y:310,l:'Server 3',nw:true},{t:'server',x:675,y:310,l:'Server 4',nw:true},
+    {t:'db',x:240,y:514,s:52,l:'Slave DB'},{t:'db',x:400,y:514,s:52,l:'Master DB'},{t:'db',x:560,y:514,s:52,l:'Slave DB'},
+    {t:'cache',x:760,y:514,s:56,l:'Cache'},{t:'nosql',x:900,y:514,s:56,l:'NoSQL · sessions',nw:true}],
+  edges:[{p:[500,226,500,262]},
+    {p:[480,374,406,484]},{p:[440,374,250,484],dash:true},{p:[520,374,552,484],dash:true},
+    {p:[268,514,372,514],c:'muted',both:true,nopk:true,l:'Replicate',ly:504},{p:[428,514,532,514],c:'muted',both:true,nopk:true,l:'Replicate',ly:504},
+    {p:[640,374,752,484],c:'lime'},{p:[705,368,888,484],c:'violet',nw:true}]
+});
+const DCBODY=(nw)=>({
+  groups:[{x:110,y:262,w:720,h:330,l:'DC1',solid:true},{x:170,y:292,w:170,h:112},{x:140,y:452,w:180,h:118},{x:350,y:452,w:160,h:118},{x:590,y:452,w:170,h:118},{x:300,y:618,w:400,h:86,l:'Tools',solid:true}],
+  nodes:[{t:'cluster',x:255,y:338,s:56,l:'Web servers'},{t:'mq',x:660,y:338,s:66,l:'Message Queue',nw},{t:'caches',x:430,y:505,s:52,l:'Caches'},{t:'cluster',x:675,y:502,s:52,l:'Workers',nw},{t:'nosql',x:915,y:510,s:56,l:'NoSQL'},
+    {t:'tag',x:360,y:670,w:92,l:'Logging',nw},{t:'tag',x:460,y:670,w:92,l:'Metrics',nw},{t:'tag',x:560,y:670,w:98,l:'Monitoring',nw},{t:'tag',x:660,y:670,w:98,l:'Automation',nw}],
+  edges:[{p:[500,226,500,262]},{p:[342,338,622,338],c:'violet',nw},{p:[672,396,672,466],c:'violet',nw},
+    {p:[290,404,420,470],c:'lime'},{p:[340,388,895,488],c:'violet'},{p:[500,618,500,594],c:'pink',nw,nopk:true}]
+});
+ARCH.SC=merge(TOP(),CDN(false),DCBODY(true),{vb:'60 0 920 720',
+  nodes:[{t:'dbs',x:230,y:505,s:52,l:'Databases'}],edges:[{p:[240,404,232,470]}]});
+ARCH.SD=merge(TOP(),CDN(false),DCBODY(false),{vb:'60 0 920 720',
+  nodes:[{t:'db',x:175,y:500,s:40,l:'Shard 1',nw:true,c:'cyan'},{t:'db',x:230,y:500,s:40,c:'cyan'},{t:'db',x:285,y:500,s:40,l:'Shard N',c:'cyan'},{t:'text',x:230,y:556,txt:'Shard 2 …',c:'muted',fs:12},
+    {t:'nosql',x:915,y:510,s:56,nw:true}],
+  edges:[{p:[240,404,232,474]}]});
+
+ARCH.RT={vb:'40 -20 920 330',nodes:[{t:'server',x:140,y:150,s:76,l:'Web server'},{t:'cache',x:500,y:150,s:82,l:'Cache'},{t:'db',x:860,y:150,s:76,l:'Database'},
+  {t:'text',x:500,y:92,txt:'HIT ✓',c:'green',fw:700,fs:16,cls:'m-hit'},{t:'text',x:500,y:92,txt:'MISS ✕',c:'red',fw:700,fs:16,cls:'m-miss'}],
+  edges:[
+   {p:[184,132,452,132],l:'① read from cache',ly:122,cls:'m-hit'},{p:[452,170,184,170],c:'lime',l:'② data found → return',ly:196,cls:'m-hit'},
+   {p:[184,132,452,132],c:'red',l:'① check cache',ly:122,cls:'m-miss'},
+   {p:[150,106,850,106],q:[500,-40],l:'② query database',lx:500,ly:22,cls:'m-miss',dur:2.8},
+   {p:[815,150,548,150],c:'amber',l:'③ save data to cache',ly:140,cls:'m-miss'},
+   {p:[452,170,184,170],c:'lime',l:'④ return to web server',ly:196,cls:'m-miss'}]};
+
+ARCH.CDNW={vb:'40 20 920 480',nodes:[{t:'laptop',x:110,y:100,s:64,l:'User A'},{t:'laptop',x:110,y:400,s:64,l:'User B'},{t:'cdn',x:500,y:250,s:120,l:'CDN'},{t:'server',x:880,y:250,s:84,l:'Origin server'}],
+  edges:[
+   {p:[150,92,448,210],rot:true,l:'1 · GET image.png',step:1},
+   {p:[562,232,834,232],rot:true,l:'2 · not in CDN → fetch',step:2},
+   {p:[834,272,562,272],c:'lime',rot:true,lo:22,l:'3 · store image.png (TTL)',step:3},
+   {p:[444,240,150,124],c:'lime',rot:true,lo:22,l:'4 · return image.png',step:4},
+   {p:[150,380,448,280],rot:true,l:'5 · GET image.png',step:5},
+   {p:[452,300,154,414],c:'lime',rot:true,lo:22,l:'6 · return from cache ✓',step:6}]};
+
+ARCH.SF={vb:'0 0 1000 470',
+  groups:[{x:40,y:170,w:280,h:230,l:'Server 1',solid:true},{x:360,y:170,w:280,h:230,l:'Server 2',solid:true},{x:680,y:170,w:280,h:230,l:'Server 3',solid:true}],
+  nodes:[{t:'laptop',x:180,y:52,s:52,l:'User A'},{t:'laptop',x:500,y:52,s:52,l:'User B'},{t:'laptop',x:820,y:52,s:52,l:'User C'},
+   {t:'server',x:180,y:240,s:62},{t:'server',x:500,y:240,s:62},{t:'server',x:820,y:240,s:62},
+   {t:'text',x:70,y:320,a:'start',txt:'• Session data for User A',c:'text',fs:15},{t:'text',x:70,y:350,a:'start',txt:'• Profile image for User A',c:'text',fs:15},
+   {t:'text',x:390,y:320,a:'start',txt:'• Session data for User B',c:'text',fs:15},{t:'text',x:390,y:350,a:'start',txt:'• Profile image for User B',c:'text',fs:15},
+   {t:'text',x:710,y:320,a:'start',txt:'• Session data for User C',c:'text',fs:15},{t:'text',x:710,y:350,a:'start',txt:'• Profile image for User C',c:'text',fs:15}],
+  edges:[{p:[180,108,180,168],l:'http',lx:190,ly:142,la:'start'},{p:[500,108,500,168],l:'http',lx:510,ly:142,la:'start'},{p:[820,108,820,168],l:'http',lx:830,ly:142,la:'start'},
+   {p:[214,108,420,172],c:'red',dash:true,l:'✕ User A → Server 2: auth fails',rot:true,lo:-8}]};
+
+ARCH.SL={vb:'80 0 840 520',
+  groups:[{x:385,y:190,w:230,h:140}],
+  nodes:[{t:'laptop',x:200,y:52,s:52,l:'User A'},{t:'laptop',x:500,y:52,s:52,l:'User B'},{t:'laptop',x:800,y:52,s:52,l:'User C'},
+   {t:'cluster',x:500,y:252,s:62,l:'Web servers'},{t:'nosql',x:500,y:445,s:70,l:'Shared Storage'}],
+  edges:[{p:[226,98,398,202],rot:true,l:'http request'},{p:[500,98,500,188],dur:1.8},{p:[774,98,602,202],rot:true,l:'http request',dur:2.6},
+   {p:[500,332,500,404],c:'violet',l:'fetch state',lx:512,ly:372,la:'start',dur:1.6}]};
+
+(()=>{const n=[],e=[],g=[];
+  g.push({x:70,y:290,w:380,h:300,l:'DC1 · US-East',solid:true},{x:550,y:290,w:380,h:300,l:'DC2 · US-West',solid:true,cls:'dc2'});
+  [[260,''],[740,'dc2']].forEach(([cx,cls])=>{
+    n.push({t:'cluster',x:cx,y:362,s:56,l:'Web servers',cls},{t:'dbs',x:cx-80,y:508,s:50,l:'Databases',cls},{t:'caches',x:cx+80,y:508,s:50,l:'Caches',cls});
+    e.push({p:[cx-15,418,cx-70,478],cls},{p:[cx+15,418,cx+70,478],c:'lime',cls});
+  });
+  n.push({t:'nosql',x:500,y:640,s:56,l:'NoSQL',lp:'r'},{t:'text',x:350,y:252,txt:'100% traffic',c:'green',fw:700,cls:'when-outage'},{t:'xmark',x:616,y:260,cls:'when-outage'});
+  e.push({p:[300,430,478,618],c:'violet'},{p:[700,430,522,618],c:'violet',cls:'dc2'},
+    {p:[486,226,300,312],l:'geo-routed · x%',lx:350,ly:252,lcls:'when-normal',dur:1.8},
+    {p:[514,226,700,312],l:'(100 − x)%',lx:650,ly:252,lcls:'when-normal',cls:'geo2',dur:2.6});
+  ARCH.DC=merge(TOP(),CDN(false),{vb:'40 0 920 700',groups:g,nodes:n,edges:e});
+})();
+
+function build(svg){const a=ARCH[svg.dataset.arch];svg.setAttribute('viewBox',a.vb);svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.innerHTML=(a.groups||[]).map(G).join('')+(a.edges||[]).map(E).join('')+(a.nodes||[]).map(N).join('');}
+document.querySelectorAll('svg[data-arch]').forEach(build);
+
+/* ================= DECK ENGINE ================= */
+const deck=document.getElementById('deck');
+const slides=[...document.querySelectorAll('.slide')];
+let cur=0, step=0;
+slides.forEach(s=>s.querySelectorAll('.anim').forEach((e,i)=>e.style.setProperty('--i',i)));
+const maxStep=s=>Math.max(0,...[...s.querySelectorAll('[data-step]')].map(e=>+e.dataset.step));
+function fit(){const k=Math.min(innerWidth/1600,innerHeight/900);deck.style.transform=`translate(-50%,-50%) scale(${k})`}
+addEventListener('resize',fit);fit();
+
+const demos={};
+function applySteps(){
+  const s=slides[cur];
+  s.querySelectorAll('[data-step]').forEach(e=>e.classList.toggle('shown',+e.dataset.step<=step));
+  const m=maxStep(s), d=document.getElementById('sdots'); d.innerHTML='';
+  for(let i=1;i<=m;i++){const x=document.createElement('i');if(i<=step)x.className='on';d.appendChild(x)}
+}
+function go(i,atEnd){
+  if(i<0||i>=slides.length) return;
+  const prev=slides[cur], nx=slides[i];
+  if(prev.dataset.demo&&demos[prev.dataset.demo]) demos[prev.dataset.demo].leave();
+  slides.forEach(s=>s.classList.remove('back'));
+  prev.classList.remove('active'); if(i>cur) prev.classList.add('back');
+  cur=i; step=atEnd?maxStep(nx):0;
+  nx.classList.add('active'); applySteps();
+  if(nx.dataset.demo&&demos[nx.dataset.demo]) demos[nx.dataset.demo].enter();
+  document.getElementById('bar').style.width=((cur)/(slides.length-1)*100)+'%';
+  document.getElementById('count').textContent=String(cur+1).padStart(2,'0')+' / '+slides.length;
+  document.getElementById('hudSec').textContent=nx.dataset.section||'';
+  const n=nx.querySelector('.notes'); document.getElementById('notesBody').innerHTML=n?n.innerHTML:'';
+  history.replaceState(null,'','#'+(cur+1));
+}
+function next(){ if(step<maxStep(slides[cur])){step++;applySteps()} else go(cur+1) }
+function prev(){ if(step>0){step--;applySteps()} else go(cur-1,true) }
+document.getElementById('nextB').onclick=next;
+document.getElementById('prevB').onclick=prev;
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') { if(e.key==='Escape') e.target.blur(); return; }
+  if(['ArrowRight','PageDown',' ','Enter','ArrowDown'].includes(e.key)){e.preventDefault();next()}
+  else if(['ArrowLeft','PageUp','ArrowUp','Backspace'].includes(e.key)){e.preventDefault();prev()}
+  else if(e.key==='Home') go(0); else if(e.key==='End') go(slides.length-1);
+  else if(e.key==='n'||e.key==='N') document.getElementById('notes').classList.toggle('open');
+  else if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+});
+let tx=null;
+addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>50)(dx<0?next:prev)();tx=null});
+
+/* ================= INTERACTIONS ================= */
+// read-through toggle
+document.querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{
+  const rt=document.getElementById('rt'); rt.className='rt mode-'+b.dataset.rt;
+  document.querySelectorAll('[data-rt]').forEach(x=>x.classList.toggle('on',x===b));
+});
+// TTL
+const ttl=document.getElementById('ttl');
+function ttlUpd(){const v=+ttl.value;document.getElementById('mDb').style.width=(100-v)+'%';document.getElementById('mSt').style.width=v+'%';
+  const V=document.getElementById('ttlV');
+  if(v<28){V.textContent='Too short → reloads DB too often';V.style.color='#fb7185'}
+  else if(v>72){V.textContent='Too long → data becomes stale';V.style.color='#fbbf24'}
+  else {V.textContent='Balanced ✓';V.style.color='#34d399'}}
+ttl.oninput=ttlUpd;ttlUpd();
+// DC outage
+document.getElementById('dcBtn').onclick=function(){const w=document.getElementById('dcw');w.classList.toggle('outage');
+  this.textContent=w.classList.contains('outage')?'↺ Restore DC2':'⚡ Simulate DC2 outage';this.classList.toggle('on')};
+
+// LRU demo
+demos.lru=(()=>{
+  const seq=['A','B','C','A','D','E','B','F','A','C','G','A'];
+  const seqEl=document.getElementById('lruSeq'), slotsEl=document.getElementById('lruSlots'), st=document.getElementById('lruStatus');
+  let i=0, cache=[], t=null;
+  seqEl.innerHTML=seq.map(k=>`<span>${k}</span>`).join('');
+  function render(fresh,hit){
+    slotsEl.innerHTML=[0,1,2,3].map(j=>{const k=cache[j];return `<div class="slot ${k?'fill':''} ${j===0&&fresh?'fresh':''} ${j===0&&hit?'hitflash':''}">${k||''}<small>${j===0?'MRU':j===3?'LRU':''}</small></div>`}).join('');
+  }
+  function tick(){
+    if(i>=seq.length){i=0;cache=[];}
+    const k=seq[i]; [...seqEl.children].forEach((s,j)=>{s.className=j<i?'done':j===i?'cur':''});
+    const idx=cache.indexOf(k); let ev=null;
+    if(idx>=0){cache.splice(idx,1);cache.unshift(k);render(false,true);st.innerHTML=`GET <b>${k}</b> → <span class="hit">HIT</span> · moved to front`}
+    else{ if(cache.length>=4) ev=cache.pop(); cache.unshift(k); render(true,false);
+      st.innerHTML=`GET <b>${k}</b> → <span class="miss">MISS</span> · loaded from DB`+(ev?` · evicted <span class="evicted">${ev}</span>`:'');}
+    i++;
+  }
+  return {enter(){i=0;cache=[];render();st.innerHTML='';clearInterval(t);setTimeout(tick,600);t=setInterval(tick,1700)},leave(){clearInterval(t)}};
+})();
+
+// Message queue simulation
+demos.mq=(()=>{
+  const qEl=document.getElementById('mqQ'), wEl=document.getElementById('mqW'), lenEl=document.getElementById('mqLen'), stEl=document.getElementById('mqStat'), nEl=document.getElementById('wkN');
+  const kinds=['crop','blur','sharp'];
+  let q=[], workers=[], id=1, t=null, nextP=0, hist=[];
+  function mk(){const el=document.createElement('div');el.className='wk';el.innerHTML='<div><svg class="ic"><use href="#i-server"/></svg><div class="t">idle</div></div><div class="bar"><i></i></div>';return {busyUntil:0,job:null,el}}
+  function setN(n){n=Math.max(1,Math.min(6,n));while(workers.length<n){const w=mk();workers.push(w);wEl.appendChild(w.el)}while(workers.length>n){workers.pop().el.remove()}nEl.textContent=n}
+  function paintW(w){w.el.classList.toggle('busy',!!w.job);w.el.querySelector('.t').textContent=w.job?('#'+w.job.id+' '+w.job.k):'idle';
+    if(w.job){const b=w.el.querySelector('.bar i');b.style.animation='none';void b.offsetWidth;b.style.animation=''}}
+  let shown='';
+  function renderQ(){const vis=q.slice(0,24), key=vis.map(j=>j.id).join(',')+'|'+q.length; if(key===shown) return;
+    const prevMax=shown?Math.max(0,...shown.split('|')[0].split(',').map(Number)):0; shown=key;
+    qEl.innerHTML=vis.map(j=>`<div class="qjob ${j.id>prevMax?'in':''}">#${j.id}<br>${j.k}</div>`).join('')+(q.length>24?`<div class="qjob">+${q.length-24}</div>`:'');
+    lenEl.textContent=q.length; qEl.classList.toggle('hot',q.length>10);}
+  function tick(){
+    const now=performance.now(); let changedW=false;
+    if(now>=nextP){ if(q.length<60) q.push({id:id++,k:kinds[id%3]}); nextP=now+500; }
+    workers.forEach(w=>{ let ch=false; if(w.job&&now>=w.busyUntil){w.job=null;ch=true} if(!w.job&&q.length){w.job=q.shift();w.busyUntil=now+1500;ch=true} if(ch) paintW(w); });
+    renderQ();
+    hist.push(q.length); if(hist.length>12) hist.shift();
+    const growing=hist.length>=12&&hist[hist.length-1]>hist[0]+1, idle=workers.filter(w=>!w.job).length;
+    if(q.length>10||growing){stEl.innerHTML='<span style="color:#fb7185">▲ Queue is growing</span> → add more workers to reduce processing time';}
+    else if(q.length===0&&idle>=2){stEl.innerHTML='<span style="color:#fbbf24">○ Queue is mostly empty</span> → the number of workers can be reduced';}
+    else stEl.innerHTML='<span style="color:#34d399">● Balanced</span> — producers and consumers scale independently';
+  }
+  document.getElementById('wkPlus').onclick=()=>setN(workers.length+1);
+  document.getElementById('wkMinus').onclick=()=>setN(workers.length-1);
+  return {enter(){q=[];id=1;hist=[];shown='';workers=[];wEl.innerHTML='';setN(2);nextP=0;clearInterval(t);t=setInterval(tick,100)},leave(){clearInterval(t)}};
+})();
+
+// Sharding demo
+demos.shard=(()=>{
+  const box=document.getElementById('shards'), res=document.getElementById('shRes'), inp=document.getElementById('shIn');
+  let data, t=null, last=null;
+  function render(hi){
+    box.innerHTML=data.map((rows,s)=>`<div class="shard ${s===hi?'hit':''}"><h4><svg class="ic"><use href="#i-db"/></svg>Shard ${s}</h4><table><tr><th>user_id</th><th>…</th></tr>${rows.slice(-7).map(r=>`<tr class="${r===last&&s===hi?'new':''}"><td>${r}</td><td class="muted">…</td></tr>`).join('')}</table></div>`).join('');
+  }
+  function route(v){const s=v%4; data[s].push(v); last=v; render(s); res.innerHTML=`${v} % 4 = ${s} → <span style="color:#fff">Shard ${s}</span>`;}
+  function auto(){clearInterval(t);t=setInterval(()=>route(16+Math.floor(Math.random()*984)),2400)}
+  document.getElementById('shGo').onclick=()=>{const v=parseInt(inp.value,10);if(!isNaN(v)&&v>=0){clearInterval(t);route(v);inp.value='';setTimeout(()=>{},0)}};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('shGo').click()});
+  return {enter(){data=[[0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15]];last=null;render(-1);res.textContent='';auto()},leave(){clearInterval(t)}};
+})();
+
+/* ================= PARTICLE NETWORK ================= */
+(()=>{const c=document.getElementById('net'),x=c.getContext('2d');let W,H,P=[];
+  function rs(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;c.style.width=innerWidth+'px';c.style.height=innerHeight+'px';
+    P=Array.from({length:Math.round(innerWidth*innerHeight/26000)},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35}))}
+  rs();addEventListener('resize',rs);
+  const D=140*devicePixelRatio;
+  (function f(){x.clearRect(0,0,W,H);
+    for(const p of P){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1}
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){const a=P[i],b=P[j],d=Math.hypot(a.x-b.x,a.y-b.y);if(d<D){x.strokeStyle=`rgba(139,160,255,${(1-d/D)*.25})`;x.lineWidth=devicePixelRatio;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke()}}
+    x.fillStyle='rgba(160,200,255,.6)';for(const p of P){x.beginPath();x.arc(p.x,p.y,1.4*devicePixelRatio,0,7);x.fill()}
+    requestAnimationFrame(f)})();
+})();
+
+/* ================= START ================= */
+const h=parseInt(location.hash.slice(1),10);
+cur=0; slides[0].classList.add('active');
+go(!isNaN(h)&&h>=1&&h<=slides.length?h-1:0);
+if(isNaN(h)||h===1){ /* first render */ }
+</script>
+</body>
+</html>

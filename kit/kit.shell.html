@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+{{STYLE}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div class="progress"><i id="prog"></i></div>
+<main id="deck">
+{{SLIDES}}
+</main>
+
+<footer class="hud">
+ <div class="hud-l"><span>L{{ID}}</span><span class="sec" id="hudsec"></span></div>
+ <div class="hud-r">
+  <span class="scorechip" id="scorechip"><span>Score </span><b id="scoreval">0</b>/{{TOTAL}}</span>
+  <button class="nav" id="themebtn" title="Toggle light/dark" aria-label="Toggle light or dark theme">◐</button>
+  <button class="nav" id="prevbtn" aria-label="Previous slide">←</button>
+  <span class="pos" id="pos"></span>
+  <button class="nav" id="nextbtn" aria-label="Next slide">→</button>
+ </div>
+</footer>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+{{SCRIPT}}
+</script>
+</body>
+</html>

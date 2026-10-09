@@ -1,0 +1,424 @@
+<!-- 0 · Title -->
+<section class="slide" data-sec="Start">
+ <div class="wrap">
+  <div class="hero">
+   <div>
+    <p class="kicker">Lesson 01 · Learning SQL, chapter 1</p>
+    <h1>From phone books<br>to <span class="grad">SELECT</span></h1>
+    <p class="sub">Why relational databases won, what tables and keys really are, and your first SQL — run for real against the bank database from the book.</p>
+    <div class="meta">
+     <span class="chip" style="--c:var(--cyan)"><i></i>~20 minutes</span>
+     <span class="chip" style="--c:var(--amber)"><i></i>9 checkpoints · 100 points</span>
+     <span class="chip" style="--c:var(--green)"><i></i>Live SQL sandbox</span>
+    </div>
+    <p class="how">Press <b>→</b> or <b>Space</b> to move on; slides with hidden parts reveal them first. A checkpoint locks the next slide until you submit it. Answers and explanations appear only after you submit. Progress is saved in this browser.</p>
+   </div>
+   <div class="stack">
+    <pre class="code" data-sql>SELECT t.txn_id, t.txn_type_cd, t.txn_date, t.amount
+FROM customer c
+  INNER JOIN account a ON c.cust_id = a.cust_id
+  INNER JOIN product p ON p.product_cd = a.product_cd
+  INNER JOIN transaction t ON t.account_id = a.account_id
+WHERE c.fname = 'George' AND c.lname = 'Blake'
+  AND p.name = 'Checking';</pre>
+    <p class="muted" style="font-size:14.5px;margin:0">By the end of this lesson you'll be able to read this query, and you'll write a shorter version of it yourself in the lab.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 1 · What is a database -->
+<section class="slide" data-sec="1 · Databases">
+ <div class="wrap">
+  <p class="kicker">1.1 · Introduction to databases</p>
+  <h2 class="title">A database is a set of related information</h2>
+  <p class="lead">A telephone book is a database: names, numbers and addresses for one region. It also shows exactly what a paper database can't do — and why some of the first computer programs ever written were <b>database systems</b>: computerized storage and retrieval.</p>
+  <div class="grid3">
+   <div class="card" data-step><h3>Slow to search</h3><p>Finding one number in a big book takes real time.</p><p style="margin-top:10px;color:var(--green)">→ A database system retrieves data in milliseconds.</p></div>
+   <div class="card" data-step><h3>Indexed one way only</h3><p>It's sorted by last/first name. "Who lives at 12 Elm St?" is possible in theory, useless in practice.</p><p style="margin-top:10px;color:var(--green)">→ A database can index the same data in many ways.</p></div>
+   <div class="card" data-step><h3>Stale on day one</h3><p>People move and change numbers the moment it's printed.</p><p style="margin-top:10px;color:var(--green)">→ A database serves up-to-the-minute data.</p></div>
+  </div>
+  <div class="note beyond" style="margin-top:18px" data-step><span class="tag">Then → now</span><span>Early systems stored data on magnetic tapes, with technicians loading tapes on request and re-reading them for every repeated query. Today's systems manage petabytes on clusters that each cache tens of gigabytes in memory. "Index in many ways" is the idea that survives every era — it's the core of the indexes lesson later.</span></div>
+  <p class="stephint">→ reveals the next part</p>
+ </div>
+</section>
+
+<!-- 2 · Hierarchical -->
+<section id="s-hier" class="slide" data-sec="1 · Databases">
+ <div class="wrap">
+  <p class="kicker">1.2 · Nonrelational systems · hierarchical</p>
+  <h2 class="title wide">Hierarchical model: data as trees</h2>
+  <div class="split r">
+   <div class="vizbox">
+    <div class="vizbar">
+     <button class="btn" data-hier="sue">Find Sue's $1000 debit</button>
+     <button class="btn" data-hier="all">Find every debit over $200</button>
+     <button class="btn ghost" data-hier="reset">Reset</button>
+    </div>
+    <div id="hierviz"></div>
+    <div class="vizmsg" id="hiermsg">Figure 1-1 from the book. Pick a question to see how the system answers it.</div>
+   </div>
+   <div class="stack">
+    <p class="soft" style="margin:0">George and Sue each get their own tree: customer → accounts → transactions. The system finds one customer's tree, then <b>traverses</b> it.</p>
+    <div class="card"><h3>Single-parent hierarchy</h3><p>Every node has <b>zero or one parent</b> and zero, one or many children.</p></div>
+    <p class="soft" style="margin:0">Questions that follow the tree's shape are fast. Questions that cut across trees ("all big debits") mean walking every tree.</p>
+    <div class="note fe"><span class="tag">You know this</span><span>The DOM is a single-parent hierarchy. Hierarchical databases are still alive in directory services like Microsoft Active Directory and Apache Directory Server.</span></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 3 · Network -->
+<section class="slide" data-sec="1 · Databases">
+ <div class="wrap">
+  <p class="kicker">1.2 · Nonrelational systems · network</p>
+  <h2 class="title wide">Network model: records plus explicit links</h2>
+  <div class="split r">
+   <div class="vizbox">
+    <div id="netviz"></div>
+    <div class="vizbar" style="margin:10px 0 0">
+     <button class="btn" id="netstep">Walk the path: step 1</button>
+     <button class="btn" id="netprod" style="--c:var(--lime)">Show product links</button>
+     <button class="btn ghost" id="netreset">Reset</button>
+    </div>
+   </div>
+   <div class="stack">
+    <p class="soft" style="margin:0">To find the transactions on Sue's money market account:</p>
+    <ol class="steps" id="netsteps">
+     <li><span class="n">1</span><span class="t">Find the customer record for Sue Smith.</span></li>
+     <li><span class="n">2</span><span class="t">Follow the link from her record to her list of accounts.</span></li>
+     <li><span class="n">3</span><span class="t">Traverse the chain of accounts until you reach money market.</span></li>
+     <li><span class="n">4</span><span class="t">Follow the link from that account to its list of transactions.</span></li>
+    </ol>
+    <div class="card accent" style="--c:var(--lime)"><h3>Multi-parent hierarchy</h3><p>Each product record (Checking, Savings…) also links to every account of that type. An account is reachable from its customer <i>and</i> its product.</p></div>
+    <div class="note warn"><span class="tag">The catch</span><span>In both models, relationships are physical links. Every question is a navigation path you code by hand — a new question means new navigation code. Both still run today, mostly on mainframes.</span></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 4 · Checkpoint 1 -->
+<section class="slide" data-sec="Checkpoint 1" data-gate="cp1">
+ <div class="wrap top"><div id="cp1"></div></div>
+</section>
+
+<!-- 5 · Relational model -->
+<section class="slide" data-sec="2 · Relational model">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--violet)">2.1 · The relational model</p>
+  <h2 class="title wide">1970: everything becomes a table</h2>
+  <p class="lead">E. F. Codd of IBM published <i>A Relational Model of Data for Large Shared Data Banks</i>: represent data as sets of tables, and instead of pointers, link rows with <b>redundant data</b> — matching values stored in both places. Same bank, relational version (Figure 1-3). <b>Click any row.</b></p>
+  <div class="rel" id="relviz"></div>
+  <div class="relcap" id="relcap">Nothing selected. Every lit row you'll see is reachable purely by matching values — no pointers anywhere.</div>
+ </div>
+</section>
+
+<!-- 6 · Primary keys -->
+<section id="s-keys" class="slide" data-sec="2 · Relational model">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--violet)">2.2 · Primary keys</p>
+  <h2 class="title wide">A primary key is a row's identity</h2>
+  <div class="split">
+   <div class="stack">
+    <div class="card"><h3><span style="color:var(--pk)">◆</span> Primary key</h3><p>One or more columns whose value uniquely identifies each row. <code class="i">cust_id = 1</code> is George, forever; nothing else is needed to find him.</p></div>
+    <div class="card"><h3>Compound key</h3><p>A primary key made of two or more columns, e.g. <code class="i">(fname, lname)</code>.</p></div>
+    <div class="card"><h3>Natural vs surrogate</h3><p><b>Natural</b>: built from real-world data (a name). <b>Surrogate</b>: a value invented just to be the key (<code class="i">cust_id</code>). Every server can generate unique numbers for you.</p></div>
+    <div class="note"><span class="tag">Rule</span><span>Primary key values must never change once assigned. Names change — so names make bad keys.</span></div>
+   </div>
+   <div class="vizbox">
+    <div class="vizbar">
+     <span class="muted" style="font-size:14px">Primary key:</span>
+     <div class="seg" id="keymode"><button data-m="natural" class="on">(fname, lname)</button><button data-m="surrogate">cust_id</button></div>
+    </div>
+    <div class="vizbar">
+     <button class="btn" id="keyadd">Add another George Blake</button>
+     <button class="btn" id="keyren">Sue becomes Sue Jones</button>
+     <button class="btn ghost" id="keyreset">Reset</button>
+    </div>
+    <div id="keyviz" class="grid2"></div>
+    <div class="banner" id="keymsg">Try both buttons under each key choice.</div>
+   </div>
+  </div>
+  <div class="note fe" style="margin-top:16px"><span class="tag">You know this</span><span>React's <code class="i">key</code> prop is a primary key for list items: unique among siblings and stable over time. <code class="i">key={index}</code> breaks for the same reason a changeable primary key does — the identity shifts when the data changes.</span></div>
+ </div>
+</section>
+
+<!-- 7 · Foreign keys -->
+<section id="s-fk" class="slide" data-sec="2 · Relational model">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--violet)">2.3 · Foreign keys and joins</p>
+  <h2 class="title wide">Foreign keys: relationships stored as values</h2>
+  <p class="lead">A <b>foreign key</b> is one or more columns that identify a single row in <i>another</i> table. They do the job the arrows did in the older models. Taking a foreign key value and finding the matching row is called a <b>join</b>.</p>
+  <div class="split r">
+   <div class="vizbox"><div id="fkviz" class="grid2"></div></div>
+   <div class="stack">
+    <p class="soft" style="margin:0;font-weight:600">Find George Blake's checking transactions:</p>
+    <ol class="steps" id="fksteps">
+     <li><span class="n">1</span><span class="t">In <b>customer</b>, find George Blake → <code class="i">cust_id = 1</code>.</span></li>
+     <li><span class="n">2</span><span class="t">In <b>product</b>, find "Checking" → <code class="i">product_cd = 'CHK'</code>.</span></li>
+     <li><span class="n">3</span><span class="t">In <b>account</b>, find the row with <code class="i">cust_id = 1</code> and <code class="i">product_cd = 'CHK'</code> → <code class="i">account_id = 103</code>.</span></li>
+     <li><span class="n">4</span><span class="t">In <b>transaction</b>, take every row with <code class="i">account_id = 103</code>.</span></li>
+    </ol>
+    <div class="row"><button class="btn" id="fknext">Step 1</button><button class="btn ghost" id="fkreset">Reset</button></div>
+    <p class="muted" style="font-size:14.5px;margin:0">Four lookups, zero pointers. SQL does all four in one statement — the query from the title slide.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 8 · Terms -->
+<section class="slide" data-sec="2 · Relational model">
+ <div class="wrap">
+  <p class="kicker" style="--acc:var(--violet)">2.4 · Terminology (Table 1-1)</p>
+  <h2 class="title wide">The vocabulary, mapped to what you already use</h2>
+  <div class="card" style="padding:8px 14px;overflow-x:auto">
+   <table class="gloss">
+    <thead><tr><th>Term</th><th>Definition</th><th>Frontend analogue</th></tr></thead>
+    <tbody>
+     <tr><td>Entity</td><td>Something the users care about: customers, parts, locations.</td><td>type Customer = {…}</td></tr>
+     <tr><td>Column</td><td>An individual piece of data stored in a table.</td><td>a property</td></tr>
+     <tr><td>Row (record)</td><td>Columns that together describe one entity, or one action on it.</td><td>one object</td></tr>
+     <tr><td>Table</td><td>A set of rows, in memory (nonpersistent) or on disk (persistent).</td><td>Customer[] — persisted</td></tr>
+     <tr><td>Result set</td><td>A nonpersistent table, usually the result of a query.</td><td>derived: list.filter(…)</td></tr>
+     <tr><td>Primary key</td><td>Columns that uniquely identify each row in a table.</td><td>id · React key</td></tr>
+     <tr><td>Foreign key</td><td>Columns that together identify one row in another table.</td><td>post.authorId</td></tr>
+    </tbody>
+   </table>
+  </div>
+  <div class="note fe" style="margin-top:16px"><span class="tag">You know this</span><span>If you've normalized Redux state (<code class="i">byId</code> maps, entities referencing each other by id instead of nesting copies), you've already done relational design. The Redux docs borrowed the idea from databases.</span></div>
+ </div>
+</section>
+
+<!-- 9 · Checkpoint 2 -->
+<section class="slide" data-sec="Checkpoint 2" data-gate="cp2">
+ <div class="wrap top"><div id="cp2"></div></div>
+</section>
+
+<!-- 10 · Normalization -->
+<section id="s-norm" class="slide" data-sec="2 · Relational model">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--violet)">2.5 · Redundancy and normalization</p>
+  <h2 class="title wide">One fact, one place</h2>
+  <div class="grid3" style="margin-bottom:16px">
+   <div class="card accent" style="--c:var(--green)"><h3>Allowed</h3><p><code class="i">account.cust_id</code> — storing another row's key. That's the only redundancy the model wants.</p></div>
+   <div class="card accent" style="--c:var(--red)"><h3>Not allowed</h3><p>Copying the customer's name into <code class="i">account</code>. Change it in one place and the other copy lies.</p></div>
+   <div class="card accent" style="--c:var(--red)"><h3>Not allowed</h3><p>One column holding several facts: <code class="i">name</code> = first + last, <code class="i">address</code> = street, city, state, zip.</p></div>
+  </div>
+  <p class="soft" style="margin:0 0 12px">Refining a design until each independent piece of information lives in exactly one place (foreign keys excepted) is <b>normalization</b>. Watch what happens without it:</p>
+  <div class="vizbox">
+   <div class="vizbar"><button class="btn" id="anomrun">Sue becomes Sue Jones</button><button class="btn ghost" id="anomreset">Reset</button><span class="muted" style="font-size:14px">Both sides run <code class="i">UPDATE … WHERE account_id = 105</code> or its normalized equivalent.</span></div>
+   <div class="grid2" id="anomviz"></div>
+  </div>
+  <div class="note beyond" style="margin-top:14px"><span class="tag">Beyond the book</span><span>Formal normal forms (1NF–3NF) and deliberate denormalization for read-heavy views come later. The instinct to build now: if a fact can be written in two places, it will eventually disagree with itself.</span></div>
+ </div>
+</section>
+
+<!-- 11 · Checkpoint 3 -->
+<section class="slide" data-sec="Checkpoint 3" data-gate="cp3">
+ <div class="wrap top"><div id="cp3"></div></div>
+</section>
+
+<!-- 12 · What is SQL -->
+<section class="slide" data-sec="3 · SQL">
+ <div class="wrap">
+  <p class="kicker" style="--acc:var(--pink)">3.1 · What is SQL?</p>
+  <h2 class="title wide">A language for tables, 50+ years in the making</h2>
+  <div class="timeline" style="margin:8px 0 18px">
+   <div class="tl" data-step><div class="y">1970</div><div class="d">Codd proposes the relational model and a language, <b>DSL/Alpha</b></div></div>
+   <div class="tl" data-step style="--c:var(--violet)"><div class="y">IBM</div><div class="d">A prototype team simplifies it into <b>SQUARE</b></div></div>
+   <div class="tl" data-step style="--c:var(--violet)"><div class="y">→</div><div class="d">Refined into <b>SEQUEL</b></div></div>
+   <div class="tl" data-step style="--c:var(--pink)"><div class="y">→</div><div class="d">Shortened to <b>SQL</b></div></div>
+   <div class="tl" data-step style="--c:var(--amber)"><div class="y">1986</div><div class="d">First ANSI standard<div class="std"><span>89</span><span>92</span><span>99</span><span>2003</span><span>06</span><span>08</span><span>11</span><span>16</span><span class="x" title="Published after the book">2023</span></div></div></div>
+  </div>
+  <div class="split" data-step>
+   <div class="vizbox"><div id="closureviz"></div></div>
+   <div class="stack">
+    <div class="card"><h3>The result of a query is a table</h3><p>So a result set can be stored as a new table, or fed as input to another query. That closure is why SQL composes so well.</p></div>
+    <div class="card"><h3>Not an acronym</h3><p>Despite "Structured Query Language", SQL officially stands for nothing. Say "S-Q-L" or "sequel" — both are fine. Later standards added object features, XML and JSON.</p></div>
+   </div>
+  </div>
+  <p class="stephint">→ reveals the next part</p>
+ </div>
+</section>
+
+<!-- 13 · Statement classes -->
+<section id="s-classes" class="slide" data-sec="3 · SQL">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--pink)">3.2 · SQL statement classes</p>
+  <h2 class="title wide">Three kinds of statements</h2>
+  <div class="grid3 cls3">
+   <div class="card accent" style="--c:var(--cyan)"><h3>Schema <code>DDL</code></h3><p>Define the structures data lives in.</p>
+<pre class="code" data-sql style="margin-top:10px;font-size:12.5px">CREATE TABLE corporation
+ (corp_id SMALLINT,
+  name VARCHAR(30),
+  CONSTRAINT pk_corporation
+    PRIMARY KEY (corp_id)
+ );</pre></div>
+   <div class="card accent" style="--c:var(--lime)"><h3>Data <code>DML</code></h3><p>Manipulate what's inside: <b>select, insert, update, delete</b>.</p>
+<pre class="code" data-sql style="margin-top:10px;font-size:12.5px">INSERT INTO corporation
+  (corp_id, name)
+VALUES (27, 'Acme Paper Corporation');
+
+SELECT name
+FROM corporation
+WHERE corp_id = 27;</pre></div>
+   <div class="card accent" style="--c:var(--pink)"><h3>Transaction <code>TCL</code></h3><p>Begin, end and roll back units of work (lesson on transactions).</p>
+<pre class="code" data-sql style="margin-top:10px;font-size:12.5px">START TRANSACTION;
+UPDATE account
+SET balance = balance - 100
+WHERE account_id = 103;
+COMMIT;   -- or ROLLBACK;</pre></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+   <div class="note"><span class="tag">Data dictionary</span><span>Everything created by schema statements is recorded in special tables — <b>metadata</b>, "data about the database". You can SELECT from them to discover tables and columns at runtime (in MySQL: <code class="i">information_schema</code>).</span></div>
+   <div class="note beyond"><span class="tag">Beyond the book</span><span>The book says schema / data / transaction statements; in the industry you'll hear <b>DDL</b>, <b>DML</b> and <b>TCL</b>, plus <b>DCL</b> for permissions (<code class="i">GRANT</code>, <code class="i">REVOKE</code>). Some split SELECT off as "DQL". Most of the book — and your job — is DML.</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 14 · Checkpoint 4 -->
+<section class="slide" data-sec="Checkpoint 4" data-gate="cp4">
+ <div class="wrap top"><div id="cp4"></div></div>
+</section>
+
+<!-- 15 · Nonprocedural -->
+<section id="s-optimizer" class="slide" data-sec="3 · SQL">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--pink)">3.3 · SQL is nonprocedural</p>
+  <h2 class="title wide">You describe the result. The optimizer picks the path.</h2>
+  <div class="grid2">
+   <div class="stack">
+    <p class="soft" style="margin:0">A <b>procedural</b> language defines the result <i>and</i> the process. A <b>nonprocedural</b> one defines only the result; an external agent decides how. In SQL that agent is the <b>optimizer</b>: it looks at your tables and available indexes and chooses an execution path — usually, not always, the most efficient one.</p>
+<pre class="code" data-js>// procedural: you own the loop
+const out = [];
+for (const c of customers)
+  if (c.lname === 'Smith')
+    out.push({ cust_id: c.cust_id, fname: c.fname });</pre>
+<pre class="code" data-sql>-- nonprocedural: you own the "what"
+SELECT cust_id, fname
+FROM customer
+WHERE lname = 'Smith';</pre>
+    <div class="note fe"><span class="tag">You know this</span><span>Imperative DOM code vs React: you declare the UI, the reconciler decides which DOM operations to run. The optimizer is SQL's reconciler.</span></div>
+   </div>
+   <div class="vizbox">
+    <div class="vizbar">
+     <span class="muted" style="font-size:14px">Index on lname:</span>
+     <div class="seg" id="optmode"><button data-m="off" class="on">off</button><button data-m="on">on</button></div>
+     <button class="btn primary" id="optrun">Run the same query</button>
+    </div>
+    <div id="optviz"></div>
+    <div class="vizmsg" id="optmsg">Rows examined: <span class="counter" id="optcount">0</span></div>
+    <p class="muted" style="font-size:13.5px;margin:6px 0 0">Simplified: a real index is a B-tree, not a sorted list. You can nudge the optimizer with <b>hints</b>, and read its plan with <code class="i">EXPLAIN</code> — both later.</p>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 16 · Integration -->
+<section class="slide" data-sec="3 · SQL">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--pink)">3.4 · Running SQL from code</p>
+  <h2 class="title wide">SQL alone doesn't build an app</h2>
+  <div class="split">
+   <div class="stack">
+    <p class="soft" style="margin:0">Two ways to combine SQL with logic:</p>
+    <div class="card"><h3>Vendor procedural languages</h3><p>SQL is part of the grammar: Oracle's <b>PL/SQL</b>, MySQL's stored procedure language, Microsoft's <b>Transact-SQL</b>.</p></div>
+    <div class="card"><h3>A toolkit from your language (Table 1-2)</h3>
+     <table class="gloss" style="font-size:14px"><tbody>
+      <tr><td>Java</td><td>JDBC</td></tr><tr><td>C#</td><td>ADO.NET</td></tr><tr><td>Ruby</td><td>Ruby DBI</td></tr><tr><td>Python</td><td>Python DB (DB-API)</td></tr><tr><td>Go</td><td>database/sql</td></tr>
+      <tr><td style="color:var(--violet)">Node / TS</td><td style="color:var(--violet)">pg, mysql2 (drivers) · Knex, Kysely · Prisma, Drizzle</td></tr>
+     </tbody></table>
+    </div>
+    <p class="muted" style="font-size:14.5px;margin:0">For interactive work every vendor ships a command-line tool (the book uses <code class="i">mysql</code>) and usually a GUI.</p>
+   </div>
+   <div class="stack">
+    <div class="layers">
+     <div class="layer"><b>Your code</b><span>Next.js route handler, server action, worker</span></div>
+     <div class="arrowdown">↓</div>
+     <div class="layer" style="border-color:color-mix(in srgb,var(--violet) 40%,transparent)"><b>ORM / builder</b><span>Prisma, Drizzle, Kysely — optional; they generate SQL text</span></div>
+     <div class="arrowdown">↓</div>
+     <div class="layer"><b>Driver</b><span>pg, mysql2 — sends SQL over the network, returns rows + rows affected</span></div>
+     <div class="arrowdown">↓ wire protocol</div>
+     <div class="layer db"><b>Database server</b><span>parse → <b style="color:var(--amber)">optimize</b> → execute → storage</span></div>
+    </div>
+    <div class="note beyond"><span class="tag">Senior note</span><span>Every layer ends in SQL text. ORMs hide it until a slow query appears in production — then reading SQL and its plan is the job. That's why this series teaches raw SQL first.</span></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 17 · Checkpoint 5 -->
+<section class="slide" data-sec="Checkpoint 5" data-gate="cp5">
+ <div class="wrap top"><div id="cp5"></div></div>
+</section>
+
+<!-- 18 · Anatomy -->
+<section id="s-anatomy" class="slide" data-sec="4 · First queries">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--green)">4.1 · Anatomy of a query</p>
+  <h2 class="title wide">SELECT, FROM, WHERE — and the order to write them</h2>
+  <div class="split">
+   <div class="stack">
+<pre class="code" data-sql>SELECT /* one or more things */ ...
+FROM   /* one or more places */ ...
+WHERE  /* one or more conditions apply */ ...</pre>
+    <p class="soft" style="margin:0">Almost every query has these three clauses. The book's advice for <b>writing</b> one:</p>
+    <ol class="steps">
+     <li><span class="n">1</span><span class="t"><span><b>FROM</b> — which table(s) hold the data?</span></span></li>
+     <li><span class="n">2</span><span class="t"><span><b>WHERE</b> — which rows don't you want?</span></span></li>
+     <li><span class="n">3</span><span class="t"><span><b>SELECT</b> — which columns go in the result?</span></span></li>
+    </ol>
+    <p class="muted" style="font-size:14.5px;margin:0">Text between <code class="i">/*</code> and <code class="i">*/</code> is a comment, as is anything after <code class="i">--</code> on a line.</p>
+   </div>
+   <div class="vizbox">
+<pre class="code" id="pipeq" style="margin-bottom:12px"><span class="clause" data-c="select"><span class="k">SELECT</span> txn_id, amount</span>
+<span class="clause" data-c="from"><span class="k">FROM</span> transaction</span>
+<span class="clause" data-c="where"><span class="k">WHERE</span> account_id = <span class="n">105</span></span>;</pre>
+    <div class="vizbar"><button class="btn" id="pipenext">Run step 1: FROM</button><button class="btn ghost" id="pipereset">Reset</button><span class="counter" id="pipecount"></span></div>
+    <div id="pipeviz" class="pipe"></div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- 19 · Changing data playground -->
+<section id="s-changing" class="slide" data-sec="4 · First queries">
+ <div class="wrap top">
+  <p class="kicker" style="--acc:var(--green)">4.2 · Changing data</p>
+  <h2 class="title wide">INSERT, UPDATE, DELETE — and always read "rows affected"</h2>
+  <div class="lab">
+   <div>
+    <p class="task">UPDATE and DELETE take a WHERE clause too: it picks the rows to change. Filter on the primary key and you should expect exactly <b>one</b> row (or zero if it doesn't exist). The engine always reports how many rows were returned, created, modified or removed — check it. Try the presets in order, then experiment freely.</p>
+    <div class="presets" id="pgpresets"></div>
+    <div id="playground"></div>
+    <div class="note warn" style="margin-top:12px"><span class="tag">Classic</span><span>A DELETE without WHERE removes every row. In code, your driver returns the count (<code class="i">result.rowCount</code> in pg, <code class="i">affectedRows</code> in mysql2) — assert on it. To rehearse risky changes, wrap them in <code class="i">START TRANSACTION … ROLLBACK</code>; it works here.</span></div>
+   </div>
+   <div id="pgschema"></div>
+  </div>
+ </div>
+</section>
+
+<!-- 20-23 · Labs -->
+<section class="slide" data-sec="SQL lab" data-gate="lab1"><div class="wrap top"><div id="lab1"></div></div></section>
+<section class="slide" data-sec="SQL lab" data-gate="lab2"><div class="wrap top"><div id="lab2"></div></div></section>
+<section class="slide" data-sec="SQL lab" data-gate="lab3"><div class="wrap top"><div id="lab3"></div></div></section>
+<section class="slide" data-sec="SQL lab" data-gate="lab4"><div class="wrap top"><div id="lab4"></div></div></section>
+
+<!-- 24 · Landscape -->
+<section class="slide" data-sec="5 · Landscape">
+ <div class="wrap">
+  <p class="kicker" style="--acc:var(--amber)">5 · What is MySQL? · SQL unplugged</p>
+  <h2 class="title wide">Where SQL runs</h2>
+  <div class="grid3">
+   <div class="card"><h3>Commercial</h3><p>Oracle Database, Microsoft SQL Server, IBM DB2. Some are better at very large or high-throughput workloads, some at objects, large files or XML.</p></div>
+   <div class="card accent" style="--c:var(--cyan)"><h3>Open source</h3><p><b>PostgreSQL</b> and <b>MySQL</b>. The book runs everything on MySQL 8.0 — but it's a book about SQL, not MySQL: its statements run on Oracle, DB2 and SQL Server with few or no changes.</p></div>
+   <div class="card"><h3>SQL unplugged</h3><p>Hadoop, Spark, NoSQL and NewSQL: distributed systems on clusters of commodity servers — and they still speak SQL. Tools like Apache Drill query across databases, JSON, CSV and log files at once (chapter 18).</p></div>
+  </div>
+  <div class="note" style="margin-top:18px"><span class="tag">This series</span><span>From Lesson 02 on, the series runs on <b>PostgreSQL</b> — the most-used database among developers and the default in the TypeScript stack (Supabase, Neon, Prisma, Drizzle, pgvector). The book's MySQL syntax appears in "In the book" notes. This lesson's sandbox still behaves like MySQL, as in the book: string comparisons ignore case.</span></div>
+ </div>
+</section>
+
+<!-- 25 · Results -->
+<section class="slide" data-sec="Results">
+ <div class="wrap top"><div id="results"></div></div>
+</section>

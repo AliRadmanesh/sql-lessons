@@ -1,0 +1,50 @@
+# Source book (licensed PDFs, zipped page dumps)
+book/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Node / JS tooling (PGlite, test runners, bundlers)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pglite/
+coverage/
+
+# Python (kit.build.py, kit.smoke_test.py)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Smoke-test output and browser artifacts
+shots/
+.playwright/
+test-results/
+playwright-report/
+
+# Build output (regenerate with kit/kit.build.py)
+dist/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Temp and logs
+tmp/
+*.log
