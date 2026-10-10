@@ -1,4 +1,4 @@
-/* Lesson 01 · custom visualizations (Figures 1-1, 1-2, 1-3, key lab, FK walk, anomaly, closure, optimizer, pipeline). */
+/* Lesson 01 · custom visualizations (Figures 1-1, 1-2, 1-3, key lab, FK walk, anomaly, closure, pipeline). */
 /* ================= hierarchical tree (Figure 1-1) ================= */
 const ACC_LABEL = { CHK: 'Checking', SAV: 'Savings', MM: 'MoneyMkt', LOC: 'Line of credit' };
 const txnLabel = (t) => `${t.txn_type_cd === 'DBT' ? 'Debit' : 'Credit'} $${t.amount.toFixed(2)}`;
@@ -251,37 +251,6 @@ $('#closureviz').innerHTML = `<svg class="dg" viewBox="0 0 560 220" role="img" a
 <path class="ln" d="M490,96 H520 V30 H270 V70" marker-end="url(#ar2)"/><text x="395" y="22" class="lbl" text-anchor="middle">INPUT TO ANOTHER QUERY</text>
 <g class="nd"><rect x="190" y="150" width="110" height="36" rx="8" style="stroke:var(--green)"/><text x="245" y="173" text-anchor="middle">new table</text></g>
 </svg>`;
-
-/* ================= optimizer: scan vs index ================= */
-(function optimizer() {
-  const PEOPLE = [['Tanaka', 'Yuki'], ['Smith', 'Sue'], ['Adams', 'Ray'], ['Patel', 'Anya'], ['Kim', 'Min'], ['Garcia', 'Luis'], ['Blake', 'George'], ['Nguyen', 'Linh'], ['Evans', 'Tom'], ['Hughes', 'Ada'], ['Smith', 'Joe'], ['Chen', 'Wei'], ['Lopez', 'Ana'], ['Davis', 'Kai'], ['Moreno', 'Eva'], ['Baker', 'Ian']];
-  const rows = PEOPLE.map(([l, f], i) => ({ id: i + 1, lname: l, fname: f }));
-  let mode = 'off', run = 0;
-  const box = $('#optviz'), cnt = $('#optcount'), msg = $('#optmsg');
-  function render() {
-    const list = mode === 'off' ? rows : [...rows].sort((a, b) => a.lname.localeCompare(b.lname) || a.id - b.id);
-    box.innerHTML = `<div class="muted" style="font-size:13px;margin-bottom:6px">${mode === 'off' ? 'customer table, in storage order (cust_id · lname)' : 'index on lname — sorted, each entry points to a row'}</div><div class="opt-grid">${list.map((r) => `<div class="opt-cell" data-id="${r.id}">${mode === 'off' ? r.id + ' · ' : ''}${r.lname}${mode === 'on' ? ' → ' + r.id : ''}</div>`).join('')}</div>`;
-    cnt.textContent = '0'; msg.innerHTML = 'Rows examined: <span class="counter" id="optcount">0</span>';
-  }
-  async function go() {
-    const my = ++run; render(); const cells = $$('.opt-cell', box); const c = () => $('#optcount');
-    const d = reduced ? 0 : 150;
-    if (mode === 'off') {
-      let n = 0;
-      for (const cell of cells) { if (my !== run) return; cell.classList.add('scan'); n++; c().textContent = n; await sleep(d); cell.classList.remove('scan'); cell.classList.add(cell.textContent.includes('Smith') ? 'hit' : 'seen'); }
-      msg.innerHTML = `Full table scan: examined <b>16 of 16</b> rows to return <b>2</b>. At 10 million rows, that's 10,000,000 reads.`;
-    } else {
-      const sorted = cells.map((x) => x.textContent.split(' → ')[0]);
-      let lo = 0, hi = sorted.length, probes = 0;
-      while (lo < hi) { if (my !== run) return; const mid = (lo + hi) >> 1; probes++; cells[mid].classList.add('scan'); msg.innerHTML = `Index probes: <span class="counter">${probes}</span>`; await sleep(d * 3); cells[mid].classList.remove('scan'); cells[mid].classList.add('seen'); if (sorted[mid] < 'Smith') lo = mid + 1; else hi = mid; }
-      let k = lo; while (k < sorted.length && sorted[k] === 'Smith') { cells[k].classList.add('hit'); k++; await sleep(d * 2); }
-      msg.innerHTML = `Index seek: <b>${probes} probes + 2 row fetches</b> instead of 16 reads. At 10 million rows: about 24 probes. Same SQL text.`;
-    }
-  }
-  $$('#optmode button').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.m; $$('#optmode button').forEach((x) => x.classList.toggle('on', x === b)); run++; render(); }));
-  $('#optrun').addEventListener('click', go);
-  render();
-})();
 
 /* ================= query pipeline ================= */
 (function pipeline() {

@@ -5,23 +5,19 @@
    <div>
     <p class="kicker">Lesson 01 · Learning SQL, chapter 1</p>
     <h1>From phone books<br>to <span class="grad">SELECT</span></h1>
-    <p class="sub">Why relational databases won, what tables and keys really are, and your first SQL — run for real against the bank database from the book.</p>
+    <p class="sub">Why relational databases won, what tables and keys are, what SQL is, and your first statements — run against the bank database from the book.</p>
     <div class="meta">
-     <span class="chip" style="--c:var(--cyan)"><i></i>~20 minutes</span>
-     <span class="chip" style="--c:var(--amber)"><i></i>9 checkpoints · 100 points</span>
+     <span class="chip" style="--c:var(--cyan)"><i></i>~15 minutes</span>
+     <span class="chip" style="--c:var(--amber)"><i></i>8 checkpoints and labs · 100 points</span>
      <span class="chip" style="--c:var(--green)"><i></i>Live SQL sandbox</span>
     </div>
     <p class="how">Press <b>→</b> or <b>Space</b> to move on; slides with hidden parts reveal them first. A checkpoint locks the next slide until you submit it. Answers and explanations appear only after you submit. Progress is saved in this browser.</p>
    </div>
    <div class="stack">
-    <pre class="code" data-sql>SELECT t.txn_id, t.txn_type_cd, t.txn_date, t.amount
-FROM customer c
-  INNER JOIN account a ON c.cust_id = a.cust_id
-  INNER JOIN product p ON p.product_cd = a.product_cd
-  INNER JOIN transaction t ON t.account_id = a.account_id
-WHERE c.fname = 'George' AND c.lname = 'Blake'
-  AND p.name = 'Checking';</pre>
-    <p class="muted" style="font-size:14.5px;margin:0">By the end of this lesson you'll be able to read this query, and you'll write a shorter version of it yourself in the lab.</p>
+    <pre class="code" data-sql>SELECT cust_id, fname
+FROM customer
+WHERE lname = 'Smith';</pre>
+    <p class="muted" style="font-size:14.5px;margin:0">Three clauses, one question. By the end of this lesson you'll read this fluently and write queries like it yourself in the labs.</p>
    </div>
   </div>
  </div>
@@ -38,7 +34,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
    <div class="card" data-step><h3>Indexed one way only</h3><p>It's sorted by last/first name. "Who lives at 12 Elm St?" is possible in theory, useless in practice.</p><p style="margin-top:10px;color:var(--green)">→ A database can index the same data in many ways.</p></div>
    <div class="card" data-step><h3>Stale on day one</h3><p>People move and change numbers the moment it's printed.</p><p style="margin-top:10px;color:var(--green)">→ A database serves up-to-the-minute data.</p></div>
   </div>
-  <div class="note beyond" style="margin-top:18px" data-step><span class="tag">Then → now</span><span>Early systems stored data on magnetic tapes, with technicians loading tapes on request and re-reading them for every repeated query. Today's systems manage petabytes on clusters that each cache tens of gigabytes in memory. "Index in many ways" is the idea that survives every era — it's the core of the indexes lesson later.</span></div>
+  <div class="note" style="margin-top:18px" data-step><span class="tag">Then → now</span><span>Early systems stored data on magnetic tapes, with technicians loading tapes on request and re-reading them for every repeated query. Modern systems manage petabytes, accessed by clusters of servers that each cache tens of gigabytes in high-speed memory.</span></div>
   <p class="stephint">→ reveals the next part</p>
  </div>
 </section>
@@ -62,7 +58,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
     <p class="soft" style="margin:0">George and Sue each get their own tree: customer → accounts → transactions. The system finds one customer's tree, then <b>traverses</b> it.</p>
     <div class="card"><h3>Single-parent hierarchy</h3><p>Every node has <b>zero or one parent</b> and zero, one or many children.</p></div>
     <p class="soft" style="margin:0">Questions that follow the tree's shape are fast. Questions that cut across trees ("all big debits") mean walking every tree.</p>
-    <div class="note fe"><span class="tag">You know this</span><span>The DOM is a single-parent hierarchy. Hierarchical databases are still alive in directory services like Microsoft Active Directory and Apache Directory Server.</span></div>
+    <div class="note fe"><span class="tag">You know this</span><span>The DOM is a single-parent hierarchy: every node has one parent and any number of children.</span></div>
    </div>
   </div>
  </div>
@@ -91,7 +87,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
      <li><span class="n">4</span><span class="t">Follow the link from that account to its list of transactions.</span></li>
     </ol>
     <div class="card accent" style="--c:var(--lime)"><h3>Multi-parent hierarchy</h3><p>Each product record (Checking, Savings…) also links to every account of that type. An account is reachable from its customer <i>and</i> its product.</p></div>
-    <div class="note warn"><span class="tag">The catch</span><span>In both models, relationships are physical links. Every question is a navigation path you code by hand — a new question means new navigation code. Both still run today, mostly on mainframes.</span></div>
+    <div class="note warn"><span class="tag">The catch</span><span>In both models, relationships are explicit links, so every question is a navigation path you have to walk by hand.</span></div>
    </div>
   </div>
  </div>
@@ -160,7 +156,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
      <li><span class="n">4</span><span class="t">In <b>transaction</b>, take every row with <code class="i">account_id = 103</code>.</span></li>
     </ol>
     <div class="row"><button class="btn" id="fknext">Step 1</button><button class="btn ghost" id="fkreset">Reset</button></div>
-    <p class="muted" style="font-size:14.5px;margin:0">Four lookups, zero pointers. SQL does all four in one statement — the query from the title slide.</p>
+    <p class="muted" style="font-size:14.5px;margin:0">Four lookups, zero pointers. This matching of a foreign key to its row is called a <b>join</b>; SQL can do all four lookups in a single statement, which you'll see at the end of this chapter. Joins get their own chapters later.</p>
    </div>
   </div>
  </div>
@@ -209,7 +205,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
    <div class="vizbar"><button class="btn" id="anomrun">Sue becomes Sue Jones</button><button class="btn ghost" id="anomreset">Reset</button><span class="muted" style="font-size:14px">Both sides run <code class="i">UPDATE … WHERE account_id = 105</code> or its normalized equivalent.</span></div>
    <div class="grid2" id="anomviz"></div>
   </div>
-  <div class="note beyond" style="margin-top:14px"><span class="tag">Beyond the book</span><span>Formal normal forms (1NF–3NF) and deliberate denormalization for read-heavy views come later. The instinct to build now: if a fact can be written in two places, it will eventually disagree with itself.</span></div>
+  
  </div>
 </section>
 
@@ -233,7 +229,7 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
   <div class="split" data-step>
    <div class="vizbox"><div id="closureviz"></div></div>
    <div class="stack">
-    <div class="card"><h3>The result of a query is a table</h3><p>So a result set can be stored as a new table, or fed as input to another query. That closure is why SQL composes so well.</p></div>
+    <div class="card"><h3>The result of a query is a table</h3><p>So a result set can be stored as a new permanent table, or used as input to another query (Chapter 9).</p></div>
     <div class="card"><h3>Not an acronym</h3><p>Despite "Structured Query Language", SQL officially stands for nothing. Say "S-Q-L" or "sequel" — both are fine. Later standards added object features, XML and JSON.</p></div>
    </div>
   </div>
@@ -247,14 +243,14 @@ WHERE c.fname = 'George' AND c.lname = 'Blake'
   <p class="kicker" style="--acc:var(--pink)">3.2 · SQL statement classes</p>
   <h2 class="title wide">Three kinds of statements</h2>
   <div class="grid3 cls3">
-   <div class="card accent" style="--c:var(--cyan)"><h3>Schema <code>DDL</code></h3><p>Define the structures data lives in.</p>
+   <div class="card accent" style="--c:var(--cyan)"><h3>Schema</h3><p>Define the structures data lives in.</p>
 <pre class="code" data-sql style="margin-top:10px;font-size:12.5px">CREATE TABLE corporation
  (corp_id SMALLINT,
   name VARCHAR(30),
   CONSTRAINT pk_corporation
     PRIMARY KEY (corp_id)
  );</pre></div>
-   <div class="card accent" style="--c:var(--lime)"><h3>Data <code>DML</code></h3><p>Manipulate what's inside: <b>select, insert, update, delete</b>.</p>
+   <div class="card accent" style="--c:var(--lime)"><h3>Data</h3><p>Manipulate what's inside: <b>select, insert, update, delete</b>.</p>
 <pre class="code" data-sql style="margin-top:10px;font-size:12.5px">INSERT INTO corporation
   (corp_id, name)
 VALUES (27, 'Acme Paper Corporation');
@@ -262,17 +258,9 @@ VALUES (27, 'Acme Paper Corporation');
 SELECT name
 FROM corporation
 WHERE corp_id = 27;</pre></div>
-   <div class="card accent" style="--c:var(--pink)"><h3>Transaction <code>TCL</code></h3><p>Begin, end and roll back units of work (lesson on transactions).</p>
-<pre class="code" data-sql style="margin-top:10px;font-size:12.5px">START TRANSACTION;
-UPDATE account
-SET balance = balance - 100
-WHERE account_id = 103;
-COMMIT;   -- or ROLLBACK;</pre></div>
+   <div class="card accent" style="--c:var(--pink)"><h3>Transaction</h3><p>Begin, end and roll back <b>transactions</b>. You'll meet them properly in Chapter 12.</p></div>
   </div>
-  <div class="grid2" style="margin-top:16px">
-   <div class="note"><span class="tag">Data dictionary</span><span>Everything created by schema statements is recorded in special tables — <b>metadata</b>, "data about the database". You can SELECT from them to discover tables and columns at runtime (in MySQL: <code class="i">information_schema</code>).</span></div>
-   <div class="note beyond"><span class="tag">Beyond the book</span><span>The book says schema / data / transaction statements; in the industry you'll hear <b>DDL</b>, <b>DML</b> and <b>TCL</b>, plus <b>DCL</b> for permissions (<code class="i">GRANT</code>, <code class="i">REVOKE</code>). Some split SELECT off as "DQL". Most of the book — and your job — is DML.</span></div>
-  </div>
+  <div class="note" style="margin-top:16px"><span class="tag">Data dictionary</span><span>Everything created by schema statements is recorded in special tables: <b>metadata</b>, "data about the database". You can query them with SELECT just like your own tables (Chapter 15). Most of this book is about the <b>data</b> statements: select, update, insert and delete.</span></div>
  </div>
 </section>
 
@@ -286,9 +274,9 @@ COMMIT;   -- or ROLLBACK;</pre></div>
  <div class="wrap top">
   <p class="kicker" style="--acc:var(--pink)">3.3 · SQL is nonprocedural</p>
   <h2 class="title wide">You describe the result. The optimizer picks the path.</h2>
-  <div class="grid2">
+  <div class="split">
    <div class="stack">
-    <p class="soft" style="margin:0">A <b>procedural</b> language defines the result <i>and</i> the process. A <b>nonprocedural</b> one defines only the result; an external agent decides how. In SQL that agent is the <b>optimizer</b>: it looks at your tables and available indexes and chooses an execution path — usually, not always, the most efficient one.</p>
+    <p class="soft" style="margin:0">A <b>procedural</b> language defines the result <i>and</i> the process that produces it. A <b>nonprocedural</b> one defines only the result; an external agent decides how to get there.</p>
 <pre class="code" data-js>// procedural: you own the loop
 const out = [];
 for (const c of customers)
@@ -298,17 +286,11 @@ for (const c of customers)
 SELECT cust_id, fname
 FROM customer
 WHERE lname = 'Smith';</pre>
-    <div class="note fe"><span class="tag">You know this</span><span>Imperative DOM code vs React: you declare the UI, the reconciler decides which DOM operations to run. The optimizer is SQL's reconciler.</span></div>
    </div>
-   <div class="vizbox">
-    <div class="vizbar">
-     <span class="muted" style="font-size:14px">Index on lname:</span>
-     <div class="seg" id="optmode"><button data-m="off" class="on">off</button><button data-m="on">on</button></div>
-     <button class="btn primary" id="optrun">Run the same query</button>
-    </div>
-    <div id="optviz"></div>
-    <div class="vizmsg" id="optmsg">Rows examined: <span class="counter" id="optcount">0</span></div>
-    <p class="muted" style="font-size:13.5px;margin:6px 0 0">Simplified: a real index is a B-tree, not a sorted list. You can nudge the optimizer with <b>hints</b>, and read its plan with <code class="i">EXPLAIN</code> — both later.</p>
+   <div class="stack">
+    <div class="card accent" style="--c:var(--pink)"><h3>The optimizer</h3><p>That agent is a part of the database engine. It looks at your SQL, at how your tables are configured and at which indexes are available, then decides the most efficient execution path (well, not always the most efficient).</p></div>
+    <div class="card"><h3>Optimizer hints</h3><p>Most engines let you influence it, for example by suggesting an index. Most SQL users never get that far and leave it to a database administrator or performance expert.</p></div>
+    <div class="note fe"><span class="tag">You know this</span><span>Imperative DOM code vs React: you declare the UI, the reconciler decides which DOM operations to run. The optimizer is SQL's reconciler.</span></div>
    </div>
   </div>
  </div>
@@ -318,30 +300,27 @@ WHERE lname = 'Smith';</pre>
 <section class="slide" data-sec="3 · SQL">
  <div class="wrap top">
   <p class="kicker" style="--acc:var(--pink)">3.4 · Running SQL from code</p>
-  <h2 class="title wide">SQL alone doesn't build an app</h2>
+  <h2 class="title wide">SQL alone doesn't build an application</h2>
   <div class="split">
    <div class="stack">
-    <p class="soft" style="margin:0">Two ways to combine SQL with logic:</p>
+    <p class="soft" style="margin:0">Unless it's a simple script, you need to combine SQL with your favorite programming language. Two ways:</p>
     <div class="card"><h3>Vendor procedural languages</h3><p>SQL is part of the grammar: Oracle's <b>PL/SQL</b>, MySQL's stored procedure language, Microsoft's <b>Transact-SQL</b>.</p></div>
-    <div class="card"><h3>A toolkit from your language (Table 1-2)</h3>
+    <div class="card"><h3>A toolkit / API from your language (Table 1-2)</h3>
      <table class="gloss" style="font-size:14px"><tbody>
-      <tr><td>Java</td><td>JDBC</td></tr><tr><td>C#</td><td>ADO.NET</td></tr><tr><td>Ruby</td><td>Ruby DBI</td></tr><tr><td>Python</td><td>Python DB (DB-API)</td></tr><tr><td>Go</td><td>database/sql</td></tr>
-      <tr><td style="color:var(--violet)">Node / TS</td><td style="color:var(--violet)">pg, mysql2 (drivers) · Knex, Kysely · Prisma, Drizzle</td></tr>
+      <tr><td>Java</td><td>JDBC (Java Database Connectivity)</td></tr><tr><td>C#</td><td>ADO.NET (Microsoft)</td></tr><tr><td>Ruby</td><td>Ruby DBI</td></tr><tr><td>Python</td><td>Python DB</td></tr><tr><td>Go</td><td>Package database/sql</td></tr>
+      <tr><td style="color:var(--violet)">Node / TS</td><td style="color:var(--violet)">a driver such as <code class="i">pg</code></td></tr>
      </tbody></table>
     </div>
-    <p class="muted" style="font-size:14.5px;margin:0">For interactive work every vendor ships a command-line tool (the book uses <code class="i">mysql</code>) and usually a GUI.</p>
    </div>
    <div class="stack">
     <div class="layers">
-     <div class="layer"><b>Your code</b><span>Next.js route handler, server action, worker</span></div>
+     <div class="layer"><b>Your code</b><span>Java, Python, Node…</span></div>
      <div class="arrowdown">↓</div>
-     <div class="layer" style="border-color:color-mix(in srgb,var(--violet) 40%,transparent)"><b>ORM / builder</b><span>Prisma, Drizzle, Kysely — optional; they generate SQL text</span></div>
+     <div class="layer"><b>Toolkit / API</b><span>sends your SQL to the server and hands back the results</span></div>
      <div class="arrowdown">↓</div>
-     <div class="layer"><b>Driver</b><span>pg, mysql2 — sends SQL over the network, returns rows + rows affected</span></div>
-     <div class="arrowdown">↓ wire protocol</div>
-     <div class="layer db"><b>Database server</b><span>parse → <b style="color:var(--amber)">optimize</b> → execute → storage</span></div>
+     <div class="layer db"><b>Database server</b><span>runs the statement</span></div>
     </div>
-    <div class="note beyond"><span class="tag">Senior note</span><span>Every layer ends in SQL text. ORMs hide it until a slow query appears in production — then reading SQL and its plan is the job. That's why this series teaches raw SQL first.</span></div>
+    <div class="card"><h3>Interactive work</h3><p>Every vendor ships at least a simple <b>command-line tool</b> for submitting SQL and reading the results (the book uses <code class="i">mysql</code>), and most also ship a graphical tool with one window for your commands and one for the results.</p></div>
    </div>
   </div>
  </div>
@@ -385,24 +364,23 @@ WHERE  /* one or more conditions apply */ ...</pre>
 <section id="s-changing" class="slide" data-sec="4 · First queries">
  <div class="wrap top">
   <p class="kicker" style="--acc:var(--green)">4.2 · Changing data</p>
-  <h2 class="title wide">INSERT, UPDATE, DELETE — and always read "rows affected"</h2>
+  <h2 class="title wide">INSERT and UPDATE — and read "rows affected"</h2>
   <div class="lab">
    <div>
-    <p class="task">UPDATE and DELETE take a WHERE clause too: it picks the rows to change. Filter on the primary key and you should expect exactly <b>one</b> row (or zero if it doesn't exist). The engine always reports how many rows were returned, created, modified or removed — check it. Try the presets in order, then experiment freely.</p>
+    <p class="task">An UPDATE has a WHERE clause too: it picks the rows to change. The book's <code class="i">product_cd</code> is the primary key, so you should expect exactly <b>one</b> row modified (or zero if the value doesn't exist). Whenever you run a data statement, the engine reports how many rows were returned, created, modified or removed. Try the presets in order, then experiment freely.</p>
     <div class="presets" id="pgpresets"></div>
     <div id="playground"></div>
-    <div class="note warn" style="margin-top:12px"><span class="tag">Classic</span><span>A DELETE without WHERE removes every row. In code, your driver returns the count (<code class="i">result.rowCount</code> in pg, <code class="i">affectedRows</code> in mysql2) — assert on it. To rehearse risky changes, wrap them in <code class="i">START TRANSACTION … ROLLBACK</code>; it works here.</span></div>
+    <div class="note warn" style="margin-top:12px"><span class="tag">Classic</span><span>Check the row count: it tells you if a statement did something unexpected, like a DELETE with no WHERE clause, which removes <b>every</b> row in the table. Programs get the same count from their toolkit after each statement.</span></div>
    </div>
    <div id="pgschema"></div>
   </div>
  </div>
 </section>
 
-<!-- 20-23 · Labs -->
+<!-- 20-22 · Labs -->
 <section class="slide" data-sec="SQL lab" data-gate="lab1"><div class="wrap top"><div id="lab1"></div></div></section>
 <section class="slide" data-sec="SQL lab" data-gate="lab2"><div class="wrap top"><div id="lab2"></div></div></section>
 <section class="slide" data-sec="SQL lab" data-gate="lab3"><div class="wrap top"><div id="lab3"></div></div></section>
-<section class="slide" data-sec="SQL lab" data-gate="lab4"><div class="wrap top"><div id="lab4"></div></div></section>
 
 <!-- 24 · Landscape -->
 <section class="slide" data-sec="5 · Landscape">
@@ -412,9 +390,9 @@ WHERE  /* one or more conditions apply */ ...</pre>
   <div class="grid3">
    <div class="card"><h3>Commercial</h3><p>Oracle Database, Microsoft SQL Server, IBM DB2. Some are better at very large or high-throughput workloads, some at objects, large files or XML.</p></div>
    <div class="card accent" style="--c:var(--cyan)"><h3>Open source</h3><p><b>PostgreSQL</b> and <b>MySQL</b>. The book runs everything on MySQL 8.0 — but it's a book about SQL, not MySQL: its statements run on Oracle, DB2 and SQL Server with few or no changes.</p></div>
-   <div class="card"><h3>SQL unplugged</h3><p>Hadoop, Spark, NoSQL and NewSQL: distributed systems on clusters of commodity servers — and they still speak SQL. Tools like Apache Drill query across databases, JSON, CSV and log files at once (chapter 18).</p></div>
+   <div class="card"><h3>SQL unplugged</h3><p>Hadoop, Spark, NoSQL and NewSQL: distributed systems on clusters of commodity servers — and they still speak SQL. Tools like Apache Drill can query across databases, JSON, CSV and log files at once (Chapter 18).</p></div>
   </div>
-  <div class="note" style="margin-top:18px"><span class="tag">This series</span><span>From Lesson 02 on, the series runs on <b>PostgreSQL</b> — the most-used database among developers and the default in the TypeScript stack (Supabase, Neon, Prisma, Drizzle, pgvector). The book's MySQL syntax appears in "In the book" notes. This lesson's sandbox still behaves like MySQL, as in the book: string comparisons ignore case.</span></div>
+  <div class="note" style="margin-top:18px"><span class="tag">This series</span><span>From Lesson 02 on, the series runs on <b>PostgreSQL</b>, and the book's MySQL syntax appears in "In the book (MySQL)" notes. This lesson's sandbox still behaves like MySQL, as in the book: string comparisons ignore case.</span></div>
  </div>
 </section>
 
