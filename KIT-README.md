@@ -7,8 +7,8 @@ Context for building Ali's interactive SQL lessons. The source book is *Learning
 - **Learner.** Ali is a senior frontend engineer (React/Next.js/TS) who is new to databases. The goal is senior full-stack level.
 - **Communication.** He wants direct, specific, data-grounded explanations. Skip the beginner fluff.
 - **Length.** Each lesson takes about 15–20 minutes including practice, usually 20–28 slides.
-- **Depth.** Cover the book's chapter fully, plus "beyond the book" notes where industry practice differs (PostgreSQL, ORMs, production habits).
-- **Practice that forces doing.** Put about 5 checkpoints between concepts and about 3–4 SQL labs near the end, for a total of about 100 points.
+- **Depth.** Cover the book's chapter fully and **only** that chapter, at the book's pace. No advance concepts from later chapters: if the chapter mentions one in passing, mention it as briefly and point to the chapter that covers it. The one allowed addition is the "In the book (MySQL)" note where PostgreSQL syntax differs, and short frontend analogies. Practice must be answerable from the chapter alone and only moderately hard.
+- **Practice that forces doing.** Put about 5 checkpoints between concepts and about 3 SQL labs near the end (Lesson 01 has 5 + 3), for a total of 100 points.
   - A checkpoint gates the next slide until it is submitted or skipped.
   - Answers, explanations and reference solutions appear only after submission.
 - **Dialect: PostgreSQL (decided).** Ali is aiming for full-stack TypeScript / AI Product Engineer, so lessons 02+ teach PostgreSQL.
@@ -31,14 +31,18 @@ Context for building Ali's interactive SQL lessons. The source book is *Learning
 
 | File | Role | Edit per lesson? |
 |---|---|---|
-| `kit.engine.js` | MiniSQL, an in-browser MySQL-flavored SQL engine (see §6) | Only to add features |
-| `kit.core.js` | Runtime: utils, highlighting, state/scoring, deck + gating, tables, checkpoint parts, editor, playground, labs, graders, results, `boot()` | Rarely |
+| `kit.pg.js` | PGlite driver: loads real PostgreSQL (WASM), snapshots, statement splitting, psql-style results and tags, `\dt` / `\d`, schema introspection (see §7) | Rarely |
+| `kit.engine.js` | **Legacy** MiniSQL simulator. Used only by lessons with `engine: 'minisql'` (Lesson 01) | No (frozen) |
+| `kit.core.js` | Runtime: utils, highlighting, driver selection, state/scoring, deck + gating, tables, checkpoint parts, editor, playground, labs, graders, results, `boot()` | Rarely |
 | `kit.style.css` | Theme (dark default, light via system or toggle), every component class | Append only |
 | `kit.shell.html` | Head, fonts, progress bar, HUD, toast; placeholders `{{TITLE}} {{ID}} {{TOTAL}} {{STYLE}} {{SLIDES}} {{SCRIPT}}` | No |
-| `kit.build.py` | Assembles one HTML file | No |
-| `kit.smoke_test.py` | Headless check: JS errors, gate/item consistency, screenshots, contact sheets | No |
-| `kit.test_engine.js` | `node kit.test_engine.js seed.sql`, an ad-hoc engine probe (MySQL mode) | Add cases |
-| `kit.test_engine_pg.js` | `node kit.test_engine_pg.js`, the PostgreSQL-dialect test suite (all lines must PASS) | Add cases with new features |
+| `kit.build.py` | Assembles one HTML file (`--inline` embeds PGlite for `file://`) | No |
+| `kit.smoke_test.py` | Headless check: waits for the DB, JS errors, gate/item consistency, screenshots, contact sheets | No |
+| `kit.play_test.py` | Plays every lab: reference solution, wrong answer, broken SQL | No |
+| `tests/` | `l99.*` fixture lesson for the PGlite path and `pg_playground_test.py` (real-Postgres behaviour through the UI) | Add cases with new driver features |
+| `../package.json`, `../scripts/` | `@electric-sql/pglite` dependency, `npm run lessons` (dev server), `npm run bundle:pglite` (for `--inline`) | No |
+| `kit.test_engine.js` | `node kit.test_engine.js seed.sql`, an ad-hoc MiniSQL probe (MySQL mode) | Frozen |
+| `kit.test_engine_pg.js` | `node kit.test_engine_pg.js`, the MiniSQL PostgreSQL-dialect suite (all lines must PASS). Legacy; only guards the frozen simulator | Frozen |
 | `lNN.config.js` | `const LESSON = {...}` (§3) | **Write** |
 | `lNN.seed.sql` | The lesson's database. Optional: falls back to the newest earlier `lMM.seed.sql` or to `seedFile` | Write if the DB changes |
 | `lNN.slides.html` | `<section class="slide">…` blocks only | **Write** |
@@ -49,20 +53,44 @@ Context for building Ali's interactive SQL lessons. The source book is *Learning
 
 ## 3. Fast workflow for a new lesson
 
+One-time setup (from the repo root):
+
 ```bash
-mkdir -p /home/claude/kit && cp /mnt/project/kit.* /mnt/project/l0*.* /home/claude/kit/ 2>/dev/null; cd /home/claude/kit
-# 1. Read the chapter: project PDFs are zips of per-page N.txt + N.jpeg -> unzip -o X.pdf -d /home/claude/chNN
-# 2. Write lNN.config.js, lNN.seed.sql (if needed), lNN.slides.html, lNN.viz.js, lNN.content.js
-python3 kit.build.py NN --out lesson-NN.html
-python3 kit.smoke_test.py lesson-NN.html --dark      # then view shots/sheet*.png
-python3 kit.smoke_test.py lesson-NN.html --mobile
-# 3. Play through checkpoints/labs with Playwright (pattern: answer, submit, read state.res[id].score)
-cp lesson-NN.html /mnt/user-data/outputs/lesson-NN-<slug>.html  # then present_files
+npm install                                   # @electric-sql/pglite (+ esbuild for --inline)
+pip install playwright pillow && playwright install chromium   # smoke + play tests (or rely on system Chrome)
 ```
 
-Script order inside the HTML is: engine → config → core → viz → content → `boot()`.
+Per lesson:
 
-Chromium for Playwright is at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. The sandbox has no network, so Google Fonts return 403. That is expected; fonts fall back.
+```bash
+# 1. Read the chapter: book PDFs are ordinary PDFs -> pdftotext -layout "book/N. Chapter N.pdf" /tmp/chN.txt
+# 2. Write lessons/lNN.config.js, lNN.seed.sql (if needed), lNN.slides.html, lNN.viz.js, lNN.content.js
+python3 kit/kit.build.py NN --dirs lessons kit --out dist/lesson-NN-<slug>.html
+npm run lessons                                # http://localhost:8080/  (leave running)
+python3 kit/kit.smoke_test.py http://localhost:8080/lesson-NN-<slug>.html --dark   # then view shots/sheet*.png
+python3 kit/kit.smoke_test.py http://localhost:8080/lesson-NN-<slug>.html --mobile
+python3 kit/kit.play_test.py  http://localhost:8080/lesson-NN-<slug>.html          # every lab: right, wrong, broken
+# 3. Play the checkpoints by hand or with a small Playwright script (answer, submit, read state.res[id].score)
+```
+
+**How lessons are delivered (decided, measured with PGlite 0.5.8 in Chrome):**
+
+| | Local server (default) | `--inline` single file |
+|---|---|---|
+| Command | `npm run lessons`, open `http://localhost:8080/…` | `npm run bundle:pglite` once, then `kit.build.py NN --inline` |
+| Lesson file | about 0.2 MB (engine files are shared, cached once) | about 8 MB (gzip + base64 wasm/data/initdb inside) |
+| Deck ready after navigation (start, seed, snapshot, introspect) | about 1.0 s | about 1.2 s |
+| Works by double-click (`file://`) | no: the page shows how to start the server | yes |
+| localStorage progress | per origin (`localhost:8080`); Lesson 01 progress saved under `file://` does not carry over | per file path |
+
+Use the server for everything day to day. Use `--inline` only to hand someone a lesson. Lesson 01 (`engine: 'minisql'`) needs neither: it works by double-click.
+
+Notes:
+- The server serves `dist/` and maps `/vendor/pglite/*` straight to `node_modules/@electric-sql/pglite/dist/`. There is no copy step.
+- `PORT=9000 npm run lessons` changes the port.
+- Script order inside the HTML: [MiniSQL engine, if `engine: 'minisql'`] → config → kit.pg.js → core → (after the database is ready) viz → content → `boot()`.
+- `window.__dbReady` resolves once the database is up and the deck is built. Tests await it.
+- Without a Playwright browser, the test scripts fall back to the system Chrome (`channel='chrome'`).
 
 ## 4. `lNN.config.js` contract
 
@@ -72,6 +100,7 @@ const LESSON = {
   title: 'Lesson 02 · Creating and Populating a Database — Learning SQL',
   chapter: 2,
   dialect: 'postgres',                        // lessons 02+; 'mysql' only for Lesson 01
+  // engine: 'minisql',                       // omit for the default, 'pglite' (real PostgreSQL). Only Lesson 01 uses 'minisql'.
   seed: `__SEED__`,                           // build injects lNN.seed.sql here
   // seedFile: 'kit.seed-pagila.sql',          // optional explicit seed (lessons 03+)
   db: {
@@ -113,7 +142,7 @@ The HUD and results slide compute the total from `items[*].max`.
 - **Cards.** `.card` (inside: h3, p, ul). Use `.card.accent` with `style="--c:var(--violet)"` for emphasis.
 - **Notes.** Every note is `<div class="note X"><span class="tag">Label</span><span>…</span></div>`, where X sets its role:
   - `.fe` (cyan), tagged "You know this": a frontend analogy such as React keys, Redux normalization or the reconciler. Use at least one per major concept.
-  - `.beyond` (violet), tagged "Beyond the book", "Senior note" or "Postgres": industry or production practice.
+  - `.beyond` (violet), tagged "Postgres" (or "Senior note" for a one-line pointer): use it only for PostgreSQL-vs-book differences and pointers to the chapter that covers a mentioned topic, never to teach later chapters' material early.
   - `.warn` (pink), tagged "Classic" or "The catch": a pitfall.
   - `.note` (no modifier), tagged "In the book (MySQL)": shows the book's MySQL syntax next to the PostgreSQL version taught on the slide. Use it wherever the book's code differs.
 - **Progressive reveal.** Put `data-step` on any element; →/Space reveals the steps in order before the deck advances.
@@ -190,7 +219,7 @@ LAB1.grade = gradeSelect(LAB1, { superset: 4 });   // SELECT labs
 [LAB1, LAB2].forEach(makeLab);
 ```
 
-- **Fresh database.** Every Run or Submit executes against a fresh `MiniSQL.create(SEED)` plus `setup`.
+- **Fresh database.** Every Run or Submit executes against a fresh copy of the seeded database plus `setup`. With PGlite that is a restore of a data-dir snapshot (about 0.1 s), taken once per distinct `setup`; the instance is closed when the operation ends. Database work is queued, one task at a time, and the lab's buttons lock while it runs.
 - **Blanks.** A `____` in `starter` makes it a fill-in-the-blanks lab; Run and Submit refuse until every blank is replaced.
 - **Errors.** Submissions with SQL errors are rejected (not graded), so the learner can fix them.
 - **RETURNING results.** An `INSERT/UPDATE/DELETE … RETURNING` result is `type:'rows'` with `msg` and `affected`. It counts as a result set for `gradeSelect` and as DML for `gradeState`.
@@ -201,10 +230,33 @@ LAB1.grade = gradeSelect(LAB1, { superset: 4 });   // SELECT labs
   - anything else: 0
   - Row order matters only if the reference has `ORDER BY`.
 - **`gradeState`.** Compares the `check` query output after the learner's script with the output after the reference, and compares the total rows affected by INSERT/UPDATE/DELETE.
-- **Custom graders.** Write `(r = {d, res, error}, fresh) => ({score, verdict})`. See LAB3 in l01.
+- **Custom graders.** Write `async ({d, res, error}, fresh) => ({score, verdict})`. Everything database-related is async: `await d.exec(sql)` returns the results array, and `await fresh()` returns a new seeded database (plus `setup`) that is closed for you when grading ends. See LAB3 in l01.
 - **`kind:'dml'`** hides the result-set comparison in feedback.
 
-## 7. MiniSQL engine (`kit.engine.js`)
+## 7. Engines
+
+Lessons grade SQL with one of two engines behind the same async driver interface (`create(setup)` → `{exec(sql), close()}`; `init()` → schema metadata for the UI):
+
+- **PGlite** (default, `kit.pg.js`): real PostgreSQL 17 compiled to WASM. Exact semantics and error messages, including integer division, GROUP BY, subqueries, CTEs, window functions, jsonb, EXPLAIN and extensions. **Use it for Lesson 02 onward. There is no simulator to extend.**
+- **MiniSQL** (`engine: 'minisql'`, `kit.engine.js`): the legacy hand-written simulator. Lesson 01 only. Frozen: do not extend it.
+
+### PGlite driver (`kit.pg.js`)
+
+- **Statements run one at a time**, like psql. A splitter handles quotes, `$$` blocks and comments. When a statement fails, the results of the earlier statements are kept and shown above the error (`error.results`).
+- **Result shape** (same as MiniSQL, so the UI and graders are engine-agnostic): `{type:'rows', columns, colTypes, rows, text}` or `{type:'ok', msg, affected, text, flag}`. `INSERT/UPDATE/DELETE … RETURNING` is a `rows` result that also carries `msg` and `affected`. `text` is the statement; `gradeState` uses it to count affected rows.
+- **psql-style tags** are rebuilt from the statement: `INSERT 0 1`, `UPDATE 2`, `DELETE 1`, `SELECT 3`, `CREATE TABLE`, `ALTER TABLE`, `DROP TYPE`, `BEGIN`, … `UPDATE`/`DELETE` without WHERE sets `flag:'nowhere'`.
+- **Values.** `date`, `timestamp`, `timestamptz`, `numeric` and `bigint` come back as the exact text Postgres prints (`3.50`, `2026-01-05`). `integer`, `boolean`, `jsonb` and arrays are parsed. Numeric types right-align.
+- **Errors** are PostgreSQL's own, joined as `message — DETAIL` plus `Hint: …`.
+- **psql meta-commands:** `\dt`, `\d` and `\d <table>` only. Anything else throws a message pointing to real psql.
+- **Not reproduced:** NOTICE/WARNING output (for example the ROLLBACK-without-transaction warning), `\timing`, `COPY` from files.
+- **Snapshots.** `init()` seeds once, runs `CHECKPOINT`, and dumps the data dir. Each `create()` restores it. **The `CHECKPOINT` is required:** an un-checkpointed dump restores like crash recovery and sequences jump 32 ahead (the first identity value would be 34, not 4). `tests/pg_playground_test.py` guards this.
+- **Schema metadata.** `init()` reads `LESSON.db.tables` from `information_schema` / `pg_catalog` into `BASE` (`T(name)` → `{cols, pk, fks, rows}`) for `renderTable`, the schema panel and `columns` checkpoints. Tables that do not exist in the seed are skipped, so a lesson that starts from an empty database (Lesson 02) can list tables it creates later and use `renderTable` only on tables that exist.
+- **Assets.** Server build: `import()` of `./vendor/pglite/index.js` plus fetches of `pglite.wasm`, `pglite.data`, `initdb.wasm`. Inline build: `__PG_INLINE` (gzip+base64) and the `PGliteMod` bundle; the options used are `pgliteWasmModule`, `initdbWasmModule` and `fsBundle`.
+- **Memory.** Each instance is a full Postgres. Labs close theirs after every run; the playground keeps one open until Reset.
+
+### MiniSQL engine (`kit.engine.js`) — legacy, Lesson 01 only
+
+The sections below describe the frozen simulator. They do not apply to PGlite lessons.
 
 ### API
 
@@ -270,9 +322,11 @@ Missing entirely:
 - `ON CONFLICT`
 - **PostgreSQL integer division** (`7/2` returns 3.5 here, but 3 in real PostgreSQL). Mention it in Lesson 07 and implement it there.
 
-**Extend the engine in the lesson that teaches a feature.** Update that feature's "arrives in Lesson N" message, add cases to `kit.test_engine_pg.js`, and ship the updated `kit.engine.js`.
+**Do not extend MiniSQL.** PGlite lessons get every feature for free. The "arrives in Lesson N" errors and the engine work listed in §8 no longer apply.
 
 ## 8. Roadmap (book chapter → lesson; PostgreSQL from 02)
+
+The **Engine:** items and "Add …" entries below were written for MiniSQL and are obsolete; PGlite already supports all of them. Read the right-hand column as the PostgreSQL teaching focus only.
 
 | Lesson | Chapter | PostgreSQL focus / engine work |
 |---|---|---|
@@ -309,6 +363,7 @@ Missing entirely:
 - Build children with `h(...)`. Never pass `null` to native `.append`; it prints "null".
 - Avoid rare glyphs such as ⚿. They render as tofu boxes. Use ◆ ↗ → ✓ ✕.
 - Play through every checkpoint and lab with a correct answer (full points) and a wrong answer (partial or 0 with a useful verdict).
-- Run `node kit.test_engine_pg.js` after any engine change; every line must PASS. Keep `node kit.test_engine.js l01.seed.sql` output stable (Lesson 01 runs in MySQL mode).
+- Run `node kit/kit.test_engine_pg.js` if you touch `kit.engine.js` (you should not), and keep `node kit/kit.test_engine.js lessons/l01.seed.sql` output stable (Lesson 01 runs in MySQL mode).
+- After touching `kit.pg.js` or `kit.core.js`: build and run `kit/kit.play_test.py` on Lesson 01 and on the fixture (`kit/tests/l99.*`), and `kit/tests/pg_playground_test.py`. All must PASS.
 - Check that `items` maxima sum to 100 and that the title-slide chip matches ("N checkpoints · 100 points").
-- Send a short reply: what's covered, beyond-book additions, anything Ali should decide.
+- Send a short reply: what's covered, anything the chapter mentioned that you deferred, anything Ali should decide.
