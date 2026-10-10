@@ -51,3 +51,7 @@ tmp/
 
 # Inline-build intermediates (npm run bundle:pglite)
 build/
+
+# Learning-progress database (personal data; created by npm run lessons)
+data/
+.superpowers/
