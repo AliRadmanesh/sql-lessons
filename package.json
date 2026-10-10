@@ -1,0 +1,17 @@
+{
+  "name": "sql-lessons",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Interactive SQL lessons (Learning SQL, 3rd ed.) graded by PGlite, real PostgreSQL compiled to WASM.",
+  "scripts": {
+    "lessons": "node scripts/serve.mjs",
+    "bundle:pglite": "node scripts/bundle-pglite.mjs",
+    "test:engine": "node kit/kit.test_engine_pg.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

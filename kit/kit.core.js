@@ -3,8 +3,9 @@
    Shared runtime for every lesson: utils, highlighting, state/scoring, deck
    navigation + gating, table rendering, checkpoint parts, SQL editor, playground,
    labs + graders, results slide, boot().
-   Requires (loaded before this file): kit.engine.js (MiniSQL) and the lesson's
-   config (const LESSON = {...}). See KIT-README.md for the full contract.
+   Requires (loaded before this file): the lesson's config (const LESSON = {...}) and either
+   kit.pg.js (PGDRV, the default engine) or kit.engine.js (MiniSQL, LESSON.engine 'minisql').
+   See KIT-README.md for the full contract.
    ===================================================================== */
 /* ================= utilities ================= */
 const $ = (s, r = document) => r.querySelector(s);
@@ -57,16 +58,82 @@ function hlJS(src) {
 $$('pre[data-sql]').forEach((p) => { p.innerHTML = hlSQL(p.textContent); });
 $$('pre[data-js]').forEach((p) => { p.innerHTML = hlJS(p.textContent); });
 
-/* ================= database ================= */
+/* ================= database =================
+   Two interchangeable drivers behind one async interface (see kit.pg.js for the contract):
+     LESSON.engine 'pglite' (default) -> PGDRV, real PostgreSQL in WASM
+     LESSON.engine 'minisql'          -> the legacy in-file simulator (Lesson 01 only)
+   BASE is schema metadata ({tables}) used by renderTable, the schema panel and column checkpoints. */
 const SEED = LESSON.seed;
 const DIALECT = LESSON.dialect || 'mysql';            // 'postgres' from Lesson 02 on; Lesson 01 is 'mysql'
-const newDB = () => MiniSQL.create(SEED, { dialect: DIALECT });
-const BASE = newDB();
+const ENGINE = LESSON.engine || 'pglite';
+const MINIDRV = {
+  async init() { return MiniSQL.create(SEED, { dialect: DIALECT }); },
+  async create(setup) {
+    const d = MiniSQL.create(SEED, { dialect: DIALECT }); if (setup) d.exec(setup);
+    return { raw: d, close: async () => {}, exec: async (sql) => { try { return d.exec(sql); } catch (e) { e.results = []; throw e; } } };
+  },
+};
+const DRIVER = ENGINE === 'minisql' ? MINIDRV : PGDRV;
+const newDB = (setup) => DRIVER.create(setup);          // async: resolves to a fresh, seeded {exec(sql), close()}
+let BASE = null;
 const T = (name) => BASE.tables[name];
-const fmt = (v, col) => MiniSQL.formatValue(v, col);
+
+/* Database work runs one task at a time: each PGlite instance is a full WASM Postgres, so labs queue instead of piling up. */
+let dbChain = Promise.resolve();
+const serial = (fn) => { const p = dbChain.then(fn); dbChain = p.catch(() => {}); return p; };
+
+/* Value formatting and result comparison live here, independent of the engine. */
+const round9 = (n) => Math.round(n * 1e9) / 1e9;
+function fmt(v, col) {
+  if (v == null) return 'NULL';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'number') return col && col.scale != null ? v.toFixed(col.scale) : String(round9(v));
+  if (typeof v === 'bigint') return String(v);
+  if (v instanceof Date) return v.toISOString();
+  if (Array.isArray(v)) return `{${v.map((x) => (x == null ? 'NULL' : fmt(x))).join(',')}}`;
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+const numLike = (v) => typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)));
+function canon(v) {
+  if (v == null) return '\u2205';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'bigint') return String(v);
+  if (typeof v === 'object') return JSON.stringify(v);
+  if (numLike(v)) return Number(v).toFixed(4);
+  return DIALECT === 'postgres' ? String(v) : String(v).toLowerCase();     // PostgreSQL compares strings case-sensitively
+}
+/* Row-set comparison: {equal} or {equal:false, reason:'rows'|'columns'|'not-rows', missing, extra, rowsRight}. Order is ignored. */
+function compareResults(got, exp) {
+  if (!got || got.type !== 'rows') return { equal: false, reason: 'not-rows' };
+  const key = (r) => JSON.stringify(r.map(canon));
+  const gk = got.rows.map(key), ek = exp.rows.map(key);
+  if (got.columns.length === exp.columns.length) {
+    if ([...gk].sort().join('|') === [...ek].sort().join('|')) return { equal: true };
+    return { equal: false, reason: 'rows', missing: ek.filter((k) => !gk.includes(k)).length, extra: gk.filter((k) => !ek.includes(k)).length };
+  }
+  if (got.rows.length === exp.rows.length) {      // extra or missing columns: do the learner's rows still contain the expected values?
+    const pool = got.rows.map((r) => r.map(canon));
+    const allIn = exp.rows.every((er) => { const i = pool.findIndex((gr) => er.map(canon).every((v) => gr.includes(v))); if (i < 0) return false; pool.splice(i, 1); return true; });
+    if (allIn) return { equal: false, reason: 'columns', rowsRight: true };
+  }
+  return { equal: false, reason: 'columns', rowsRight: false };
+}
+const NUM_TYPES = new Set(['int', 'smallint', 'integer', 'bigint', 'numeric', 'real', 'double precision']);
 const TABLE_CLASS = LESSON.db.tableClass || {};
 const TABLE_COLOR = LESSON.db.tableColor || {};
 const pkKey = (t, r) => t.pk.map((c) => r[c]).join('|');
+
+/* Start the engine as soon as core loads. The build runs viz + content + boot() after KIT_READY, and exposes
+   window.__dbReady (resolves once the deck is fully built) for the smoke test. */
+const loaderEl = h('div', { id: 'dbload', role: 'status' }, h('i'), h('span', {}, ENGINE === 'minisql' ? 'Loading…' : 'Starting PostgreSQL…'));
+document.body.append(loaderEl);
+function fatal(e) {
+  console.error(e);
+  loaderEl.className = 'err'; loaderEl.innerHTML = '';
+  loaderEl.append(h('b', {}, 'This lesson could not start the database.'), h('span', {}, e && e.message ? e.message : String(e)));
+}
+const KIT_READY = (async () => { BASE = await DRIVER.init(); loaderEl.remove(); })();
 
 /* ================= state ================= */
 const STORE = `sql-lesson-${LESSON.id}:v1`;
@@ -143,7 +210,7 @@ function renderTable(name, { cols = null, rows = null, compact = false, caption 
   const t = T(name); const cs = cols ? cols.map((c) => t.cols.find((x) => x.name === c)) : t.cols;
   const fkOf = (c) => t.fks.find((f) => f.cols.includes(c.name));
   const head = h('tr', {}, cs.map((c) => { const fk = fkOf(c); return h('th', { class: t.pk.includes(c.name) ? 'pk' : fk ? 'fk' : null, style: fk ? `--fkc:${TABLE_COLOR[fk.refTable]}` : null, title: fk ? `foreign key → ${fk.refTable}.${fk.refCols[0]}` : t.pk.includes(c.name) ? 'primary key' : null }, c.name); }));
-  const body = (rows || t.rows).map((r) => h('tr', { class: 'r', 'data-key': keyed ? pkKey(t, r) : null }, cs.map((c) => h('td', { class: c.scale != null || ['int', 'smallint'].includes(c.type) ? 'num' : null, 'data-col': c.name }, fmt(r[c.name], c)))));
+  const body = (rows || t.rows).map((r) => h('tr', { class: 'r', 'data-key': keyed ? pkKey(t, r) : null }, cs.map((c) => h('td', { class: c.scale != null || NUM_TYPES.has(c.type) ? 'num' : null, 'data-col': c.name }, fmt(r[c.name], c)))));
   const tbl = h('table', { class: 'tbl' }, caption ? h('caption', {}, name) : null, h('thead', {}, head), h('tbody', {}, body));
   if (compact) tbl.style.fontSize = '12.5px';
   return h('div', { class: `tblbox ${TABLE_CLASS[name] || ''}`, style: TABLE_COLOR[name] ? `--tc:${TABLE_COLOR[name]}` : null, 'data-table': name }, tbl);
@@ -223,6 +290,7 @@ const PART = { order: partOrder, classify: partClassify, columns: partColumns, m
 
 function finishRecord(id, score) { updateHud(); renderResults(); toast(`Saved: ${score} / ${MAX[id]} points. The next slide is unlocked.`); }
 
+const CPS = {};
 function makeCheckpoint(def) {
   const root = $('#' + def.id);
   const max = def.parts.reduce((a, p) => a + p.pts, 0);
@@ -242,6 +310,7 @@ function makeCheckpoint(def) {
   const out = h('span', { class: 'cp-score' });
   root.append(h('div', { class: 'cp-foot' }, submit, skip, out));
   function refresh() { submit.disabled = !apis.every((a) => a.complete()); }
+  CPS[def.id] = { def, apis, submit };              // for kit.play_test.py
   function showGraded(rec) {
     apis.forEach((a, i) => {
       const ans = rec.ans[i];
@@ -284,7 +353,7 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 function rsTable(r, title) {
   const wrap = h('div', { class: 'rs' });
   if (!r.rows.length) { wrap.append(h('div', { class: 'rsmeta' }, `${title ? title + ' · ' : ''}Empty set (0 rows)`)); return wrap; }
-  wrap.append(h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, r.columns.map((c) => h('th', {}, c)))), h('tbody', {}, r.rows.map((row) => h('tr', {}, row.map((v, i) => h('td', { class: typeof v === 'number' ? 'num' : null, style: v == null ? 'color:var(--muted)' : null }, fmt(v, r.colTypes[i]))))))));
+  wrap.append(h('table', { class: 'tbl' }, h('thead', {}, h('tr', {}, r.columns.map((c) => h('th', {}, c)))), h('tbody', {}, r.rows.map((row) => h('tr', {}, row.map((v, i) => h('td', { class: typeof v === 'number' || (r.colTypes[i] && r.colTypes[i].num) ? 'num' : null, style: v == null ? 'color:var(--muted)' : null }, fmt(v, r.colTypes[i]))))))));
   wrap.append(h('div', { class: 'rsmeta' }, `${title ? title + ' · ' : ''}${r.rows.length} row${r.rows.length === 1 ? '' : 's'} in set`));
   return wrap;
 }
@@ -308,47 +377,67 @@ const kbdHint = () => h('span', { class: 'kbd' }, `${isMac ? '⌘' : 'Ctrl'}+Ent
    makePlayground({ root: '#playground', presets: '#pgpresets', schema: '#pgschema', start: 'SELECT ...', items: [[label, sql, danger?], ...] })
    State persists across runs until "Reset database" (unlike labs, which run on a fresh copy every time). */
 function makePlayground(o) {
-  let db = newDB();
+  let db = null;
   const out = h('div', { class: 'out' });
   const ed = makeEditor(o.start || '', run);
-  function run() { const sql = ed.get(); let res = []; try { res = db.exec(sql); renderOut(out, res); } catch (e) { renderOut(out, res, e.message); } }
+  const getDB = async () => db || (db = await newDB());
+  function run() {
+    const sql = ed.get();
+    return serial(async () => {
+      let res = [];
+      try { res = await (await getDB()).exec(sql); renderOut(out, res); } catch (e) { renderOut(out, e.results || res, e.message); }
+    });
+  }
+  async function reset() { await serial(async () => { if (db) await db.close(); db = null; await getDB(); }); renderOut(out, [{ type: 'ok', msg: `Database reset to ${LESSON.db.label}.` }]); }
   const pbox = $(o.presets);
   if (pbox) (o.items || []).forEach(([l, s, danger]) => pbox.append(h('button', { type: 'button', class: danger ? 'danger' : null, onclick: () => { ed.set(s); run(); } }, l)));
-  $(o.root).append(ed.el, h('div', { class: 'edbar' }, h('button', { class: 'btn primary', type: 'button', onclick: run }, 'Run'), h('button', { class: 'btn ghost', type: 'button', onclick: () => { db = newDB(); renderOut(out, [{ type: 'ok', msg: `Database reset to ${LESSON.db.label}.` }]); } }, 'Reset database'), kbdHint()), out);
+  $(o.root).append(ed.el, h('div', { class: 'edbar' }, h('button', { class: 'btn primary', type: 'button', onclick: run }, 'Run'), h('button', { class: 'btn ghost', type: 'button', onclick: reset }, 'Reset database'), kbdHint()), out);
   if (o.schema && $(o.schema)) $(o.schema).append(schemaPanel());
-  return { ed, run, get db() { return db; } };
+  return { ed, run, reset, getDB };
 }
 
 /* ================= labs ================= */
+const LABS = {};
 function makeLab(def) {
   const root = $('#' + def.id);
-  const fresh = () => { const d = newDB(); if (def.setup) d.exec(def.setup); return d; };
+  const open = [];                                               // every database opened by one operation; closed when it ends
+  const fresh = async () => { const d = await newDB(def.setup); open.push(d); return d; };
+  const closeAll = () => Promise.all(open.splice(0).map((d) => d.close()));
   const out = h('div', { class: 'out' }); const fb = h('div', {});
   const ed = makeEditor(def.starter, run);
-  function exec(sql) { const d = fresh(); const res = []; try { for (const r of d.exec(sql)) res.push(r); return { d, res, error: null }; } catch (e) { return { d, res, error: e.message }; } }
+  async function exec(sql) { const d = await fresh(); const res = []; try { for (const r of await d.exec(sql)) res.push(r); return { d, res, error: null }; } catch (e) { return { d, res: e.results || res, error: e.message }; } }
+  const buttons = [];
+  /* One queued, button-locked database operation. */
+  const task = (fn) => { buttons.forEach((b) => { b.disabled = true; }); return serial(async () => { try { return await fn(); } finally { await closeAll(); buttons.forEach((b) => { b.disabled = false; }); } }); };
   function run() {
     const sql = ed.get();
     if (sql.includes('____')) { renderOut(out, [], 'Replace each ____ blank before running.'); return; }
-    const { d, res, error } = exec(sql); renderOut(out, res, error);
-    if (def.after && !error) out.append(rsTable(d.exec(def.after)[0], def.afterLabel || 'table after your statement'));
+    return task(async () => {
+      const { d, res, error } = await exec(sql); renderOut(out, res, error);
+      if (def.after && !error) out.append(rsTable((await d.exec(def.after))[0], def.afterLabel || 'table after your statement'));
+    });
   }
   const submit = h('button', { class: 'btn primary', type: 'button', style: '--c:var(--green)' }, 'Submit for grading');
   const runBtn = h('button', { class: 'btn', type: 'button', onclick: run }, 'Run');
   const resetBtn = h('button', { class: 'btn ghost', type: 'button', onclick: () => ed.set(def.starter) }, 'Reset code');
   const skip = h('button', { class: 'skip', type: 'button' }, 'Skip for 0 points');
+  buttons.push(runBtn, submit, skip);
+  LABS[def.id] = { def, ed, submit, runBtn };      // for kit.play_test.py
   root.append(
     h('div', { class: 'cp-head' }, h('span', { class: 'cp-badge', style: 'background:color-mix(in srgb,var(--green) 18%,transparent);color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent)' }, `SQL lab ${def.n} of ${COUNT.lab}`), h('span', { class: 'cp-pts' }, `${def.pts} points · run as often as you like, submit once`)),
     h('h2', { class: 'title wide', style: 'margin-top:12px' }, def.title),
     h('div', { class: 'lab' }, h('div', {}, h('p', { class: 'task', html: def.task }), ed.el, h('div', { class: 'edbar' }, runBtn, submit, resetBtn, kbdHint(), skip), out, fb), schemaPanel()),
   );
-  function showGraded(rec) {
+  /* Builds the graded view. `pre` ({mine, g}) reuses the run that was just graded. Call inside task(). */
+  async function showGraded(rec, pre) {
     ed.set(rec.sql || ''); ed.ta.readOnly = true; submit.remove(); skip.remove(); resetBtn.remove();
-    const g = rec.skipped ? { score: 0, verdict: 'Skipped.', cls: 'bad' } : def.grade(exec(rec.sql), fresh);
-    const refRun = exec(def.ref);
+    const mine = rec.skipped ? null : (pre ? pre.mine : await exec(rec.sql));
+    const g = rec.skipped ? { score: 0, verdict: 'Skipped.', cls: 'bad' } : (pre ? pre.g : await def.grade(mine, fresh));
+    const refRun = await exec(def.ref);
     fb.innerHTML = '';
     fb.append(h('div', { class: `fb ${g.score === def.pts ? 'good' : g.score > 0 ? 'mid' : 'bad'}`, html: `<b>${g.score} / ${def.pts}</b> — ${g.verdict}` }));
     if (!rec.skipped && def.kind !== 'dml' && def.kind !== 'update') {
-      const mine = exec(rec.sql); const last = [...mine.res].reverse().find((r) => r.type === 'rows');
+      const last = [...mine.res].reverse().find((r) => r.type === 'rows');
       const exp = [...refRun.res].reverse().find((r) => r.type === 'rows');
       fb.append(h('div', { class: 'cmp' }, h('div', {}, h('h6', {}, 'Your result'), last ? rsTable(last) : h('div', { class: 'msg' }, 'No result set')), h('div', {}, h('h6', {}, 'Expected'), rsTable(exp))));
     }
@@ -359,20 +448,27 @@ function makeLab(def) {
     const sql = ed.get();
     if (sql.includes('____')) { toast('Fill in the ____ blanks first.'); return; }
     if (!sql.replace(/--[^\n]*|\/\*[\s\S]*?\*\//g, '').trim()) { toast('Write a statement first.'); return; }
-    const r = exec(sql);
-    if (r.error) { renderOut(out, r.res, r.error); toast('Your SQL has an error — fix it, then submit. Errors are not graded.'); return; }
-    const g = def.grade(r, fresh);
-    state.res[def.id] = { score: g.score, sql }; save(); showGraded(state.res[def.id]); finishRecord(def.id, g.score);
+    task(async () => {
+      const r = await exec(sql);
+      if (r.error) { renderOut(out, r.res, r.error); toast('Your SQL has an error — fix it, then submit. Errors are not graded.'); return; }
+      const g = await def.grade(r, fresh);
+      state.res[def.id] = { score: g.score, sql }; save(); await showGraded(state.res[def.id], { mine: r, g }); finishRecord(def.id, g.score);
+    });
   });
-  skip.addEventListener('click', () => { if (!confirm('Skip this lab? It locks at 0 points and shows the solution.')) return; state.res[def.id] = { score: 0, sql: ed.get(), skipped: true }; save(); showGraded(state.res[def.id]); finishRecord(def.id, 0); });
-  if (state.res[def.id]) showGraded(state.res[def.id]);
+  skip.addEventListener('click', () => {
+    if (!confirm('Skip this lab? It locks at 0 points and shows the solution.')) return;
+    task(async () => { state.res[def.id] = { score: 0, sql: ed.get(), skipped: true }; save(); await showGraded(state.res[def.id]); finishRecord(def.id, 0); });
+  });
+  if (state.res[def.id]) task(() => showGraded(state.res[def.id]));
 }
+/* Graders receive ({d, res, error}, fresh) and may be async. `d` is the learner's database after their script;
+   `fresh()` resolves to a new seeded database (plus the lab's setup) and is closed for you when grading ends. */
 function gradeSelect(def, partial = {}) {
-  return ({ res }, fresh) => {
+  return async ({ res }, fresh) => {
     const got = [...res].reverse().find((r) => r.type === 'rows');
     if (!got) return { score: 0, verdict: 'Your script didn\'t return a result set — the task asks for a SELECT.' };
-    const exp = fresh().exec(def.ref).find((r) => r.type === 'rows');
-    const c = MiniSQL.compareResults(got, exp);
+    const exp = (await (await fresh()).exec(def.ref)).find((r) => r.type === 'rows');
+    const c = compareResults(got, exp);
     if (c.equal) return { score: def.pts, verdict: 'Exactly the expected result set.' };
     if (c.reason === 'columns' && c.rowsRight) return { score: Math.round(def.pts * 0.6), verdict: `Right rows, but the columns differ: return exactly ${exp.columns.join(', ')} (${exp.columns.length} columns), in that order.` };
     if (c.reason === 'columns') return { score: 0, verdict: `Expected ${exp.columns.length} columns (${exp.columns.join(', ')}) and different rows.` };
@@ -388,10 +484,10 @@ function gradeSelect(def, partial = {}) {
    opts.verdicts = { full, stateOnly, wrong } overrides. */
 function gradeState(def, opts = {}) {
   const dmlAffected = (res) => res.filter((r) => /^(insert|update|delete)/i.test((r.text || '').trim())).reduce((a, r) => a + (r.affected || 0), 0);
-  return ({ d, res }, fresh) => {
-    const ref = fresh(); const refRes = ref.exec(def.ref);
-    const q = (db) => db.exec(def.check).find((r) => r.type === 'rows');
-    const c = MiniSQL.compareResults(q(d), q(ref));
+  return async ({ d, res }, fresh) => {
+    const ref = await fresh(); const refRes = await ref.exec(def.ref);
+    const q = async (db) => (await db.exec(def.check)).find((r) => r.type === 'rows');
+    const c = compareResults(await q(d), await q(ref));
     const v = opts.verdicts || {};
     if (!c.equal) return { score: 0, verdict: v.wrong || `The end state doesn't match: ${c.missing || 0} expected row(s) missing, ${c.extra || 0} unexpected.` };
     const mine = dmlAffected(res), want = dmlAffected(refRes);

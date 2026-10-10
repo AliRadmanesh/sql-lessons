@@ -328,3 +328,13 @@ code.i{white-space:nowrap}
 .txtans:focus{border-color:var(--cyan)}
 .txtans.right{border-color:var(--green);background:color-mix(in srgb,var(--green) 10%,var(--panel))}
 .txtans.wrong{border-color:var(--red);background:color-mix(in srgb,var(--red) 10%,var(--panel))}
+
+/* ---- database startup overlay (PGlite lessons) ---- */
+#dbload{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:color-mix(in srgb,var(--bg,#0b0d12) 92%,transparent);color:var(--soft);font:500 15px 'JetBrains Mono',monospace;text-align:center;padding:24px}
+#dbload i{width:26px;height:26px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--cyan);animation:dbspin .8s linear infinite}
+#dbload.err{color:var(--text)}
+#dbload.err i{display:none}
+#dbload.err b{color:var(--red);font-size:17px}
+#dbload.err span{max-width:62ch;line-height:1.5;color:var(--soft)}
+@keyframes dbspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#dbload i{animation:none}}

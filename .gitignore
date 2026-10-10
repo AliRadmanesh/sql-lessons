@@ -48,3 +48,6 @@ dist/
 # Temp and logs
 tmp/
 *.log
+
+# Inline-build intermediates (npm run bundle:pglite)
+build/
