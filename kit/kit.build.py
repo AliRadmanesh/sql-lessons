@@ -60,7 +60,7 @@ if a.inline:
 # Core starts the database as soon as it loads (KIT_READY). Lesson code runs once it is ready, so renderTable/T() work.
 deck = '\n'.join([read(viz_p) if viz_p else '', read(find(f'l{NN}.content.js')), 'boot();'])
 wrapped = ('window.__dbReady = (async () => {\nawait KIT_READY;\n' + deck + '\n})();\nwindow.__dbReady.catch(fatal);')
-parts = ([read(find('kit.engine.js'))] if engine == 'minisql' else []) + [inline_js, cfg] + ([read(find('kit.pg.js'))] if engine == 'pglite' else []) + [read(find('kit.core.js')), wrapped]
+parts = ([read(find('kit.engine.js'))] if engine == 'minisql' else []) + [inline_js, cfg] + ([read(find('kit.pg.js'))] if engine == 'pglite' else []) + [read(find('kit.progress.js')), read(find('kit.core.js')), wrapped]
 js = '\n'.join(parts)
 assert '</script' not in js.lower(), 'a </script> string would break the inline script'
 

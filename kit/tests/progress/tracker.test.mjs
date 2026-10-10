@@ -62,17 +62,17 @@ test('events survive an offline send and drain on the next successful send', asy
   const api = createTracker(env);
   api.init(LESSON);
   await api.flush();
-  assert.equal(outbox(env).length, 1, 'the lesson event waits in the outbox');
+  assert.deepEqual(outbox(env).map((e) => e.type), ['lesson', 'session'], 'the lesson and session wait in the outbox');
 
   api.attempt({ item: 'cp1', score: 8, parts: [{ score: 8, max: 10, answer: ['a'] }] });
   await api.flush();
-  assert.equal(outbox(env).length, 2);
+  assert.deepEqual(outbox(env).map((e) => e.type), ['lesson', 'session', 'attempt']);
 
   env.offline = false;
   await api.flush();
   assert.deepEqual(outbox(env), []);
   const lastBatch = env.sent.at(-1).events;
-  assert.deepEqual(lastBatch.map((e) => e.type), ['lesson', 'attempt'], 'the final send carries everything still waiting');
+  assert.deepEqual(lastBatch.map((e) => e.type), ['lesson', 'session', 'attempt'], 'the final send carries everything still waiting');
 });
 
 test('an event queued while a send is in flight is sent when that send finishes', async () => {
@@ -86,6 +86,20 @@ test('an event queued while a send is in flight is sent when that send finishes'
   await new Promise((r) => setTimeout(r, 10));
   assert.deepEqual(outbox(env), [], 'nothing is left waiting for the next trigger');
   assert.ok(sentEvents(env).some((e) => e.type === 'attempt'));
+});
+
+test('the session is queued at page load, so an attempt made before the first heartbeat is accepted', () => {
+  const env = fakeEnv();
+  env.offline = true;
+  const api = createTracker(env);
+  api.init(LESSON);
+  const session = outbox(env).find((e) => e.type === 'session');
+  assert.ok(session, 'the session event is queued before any heartbeat');
+  api.attempt({ item: 'cp1', score: 8 });
+  const types = outbox(env).map((e) => e.type);
+  const attempt = outbox(env).find((e) => e.type === 'attempt');
+  assert.equal(attempt.sessionUid, session.uid);
+  assert.ok(types.indexOf('session') < types.indexOf('attempt'), 'the server sees the session first');
 });
 
 test('heartbeats replace one another, so one session event stays pending', async () => {

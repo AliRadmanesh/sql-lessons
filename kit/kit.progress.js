@@ -148,6 +148,7 @@
         lastInput = now;
         lastTick = now;
         pushOrReplace(lessonEvent(LESSON), function (e) { return e.type === 'lesson'; });
+        heartbeat(now); // queue the session now: the server must know it before any attempt that names it
         backfill();
         flush();
         env.listen(root, 'pointerdown', onInput, true);

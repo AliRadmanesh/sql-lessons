@@ -144,6 +144,7 @@ const TOTAL = Object.values(MAX).reduce((a, b) => a + b, 0);
 let state = { idx: 0, res: {}, revealed: {}, theme: null };
 try { const s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s && typeof s === 'object') state = { ...state, ...s }; } catch (e) { /* storage unavailable */ }
 const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) { /* ignore */ } };
+if (window.Progress) Progress.init(LESSON); // optional database tracking; the lesson works without it
 const totalScore = () => Object.values(state.res).reduce((a, r) => a + (r.score || 0), 0);
 const roundHalf = (x) => Math.round(x * 2) / 2;
 
@@ -172,6 +173,7 @@ function go(i, back = false) {
   i = Math.max(0, Math.min(N - 1, i));
   slides.forEach((s, k) => { s.classList.toggle('active', k === i); s.classList.toggle('back', k < i); });
   state.idx = i; save(); applySteps(i); updateHud();
+  if (window.Progress) Progress.slide(gateOf(i)); // the gate of the slide is the item being worked on
   slides[i].scrollTop = 0;
   if (onEnter[i]) onEnter[i]();
 }
@@ -322,12 +324,15 @@ function makeCheckpoint(def) {
     out.innerHTML = `Score: <span style="color:${rec.score >= max * 0.8 ? 'var(--green)' : rec.score >= max * 0.5 ? 'var(--amber)' : 'var(--red)'}">${rec.score} / ${max}</span>${rec.skipped ? ' · skipped' : ''}`;
   }
   submit.addEventListener('click', () => {
-    const ans = apis.map((a) => a.get()); const score = apis.reduce((s, a, i) => s + a.grade(ans[i]).score, 0);
+    const ans = apis.map((a) => a.get()); const parts = apis.map((a, i) => ({ score: a.grade(ans[i]).score, max: def.parts[i].pts, answer: ans[i] }));
+    const score = parts.reduce((s, p) => s + p.score, 0);
     state.res[def.id] = { score, ans }; save(); showGraded(state.res[def.id]); finishRecord(def.id, score);
+    if (window.Progress) Progress.attempt({ item: def.id, score, parts });
   });
   skip.addEventListener('click', () => {
     if (!confirm('Skip this checkpoint? It locks at 0 points and reveals the answers.')) return;
     state.res[def.id] = { score: 0, ans: apis.map(() => null), skipped: true }; save(); showGraded(state.res[def.id]); finishRecord(def.id, 0);
+    if (window.Progress) Progress.attempt({ item: def.id, score: 0, skipped: true, parts: apis.map((a, i) => ({ score: 0, max: def.parts[i].pts, answer: null })) });
   });
   if (state.res[def.id]) showGraded(state.res[def.id]);
 }
@@ -414,6 +419,7 @@ function makeLab(def) {
     if (sql.includes('____')) { renderOut(out, [], 'Replace each ____ blank before running.'); return; }
     return task(async () => {
       const { d, res, error } = await exec(sql); renderOut(out, res, error);
+      if (window.Progress) Progress.labRun({ item: def.id, sql, error });
       if (def.after && !error) out.append(rsTable((await d.exec(def.after))[0], def.afterLabel || 'table after your statement'));
     });
   }
@@ -453,11 +459,12 @@ function makeLab(def) {
       if (r.error) { renderOut(out, r.res, r.error); toast('Your SQL has an error — fix it, then submit. Errors are not graded.'); return; }
       const g = await def.grade(r, fresh);
       state.res[def.id] = { score: g.score, sql }; save(); await showGraded(state.res[def.id], { mine: r, g }); finishRecord(def.id, g.score);
+      if (window.Progress) Progress.attempt({ item: def.id, score: g.score, sql, verdict: g.verdict });
     });
   });
   skip.addEventListener('click', () => {
     if (!confirm('Skip this lab? It locks at 0 points and shows the solution.')) return;
-    task(async () => { state.res[def.id] = { score: 0, sql: ed.get(), skipped: true }; save(); await showGraded(state.res[def.id]); finishRecord(def.id, 0); });
+    task(async () => { state.res[def.id] = { score: 0, sql: ed.get(), skipped: true }; save(); await showGraded(state.res[def.id]); finishRecord(def.id, 0); if (window.Progress) Progress.attempt({ item: def.id, score: 0, skipped: true, sql: state.res[def.id].sql }); });
   });
   if (state.res[def.id]) task(() => showGraded(state.res[def.id]));
 }
