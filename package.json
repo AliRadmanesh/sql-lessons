@@ -6,7 +6,8 @@
   "scripts": {
     "lessons": "node scripts/serve.mjs",
     "bundle:pglite": "node scripts/bundle-pglite.mjs",
-    "test:engine": "node kit/kit.test_engine_pg.js"
+    "test:engine": "node kit/kit.test_engine_pg.js",
+    "test:progress": "node --disable-warning=ExperimentalWarning --test kit/tests/progress/*.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.8"

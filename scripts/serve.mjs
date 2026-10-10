@@ -5,6 +5,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openDb, migrate, DEFAULT_DB_PATH } from './progress-db/db.mjs';
+import { handleApi } from './progress-db/api.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(root, 'dist');
@@ -14,6 +16,15 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
 if (!fs.existsSync(VENDOR)) { console.error('PGlite is not installed. Run: npm install'); process.exit(1); }
 
+// Progress tracking is optional: if the database cannot open, the lessons still serve.
+let progressDb = null;
+try {
+  progressDb = openDb();
+  migrate(progressDb);
+} catch (err) {
+  console.error(`progress: database unavailable, tracking disabled: ${err.message}`);
+}
+
 function resolve(urlPath) {
   const p = decodeURIComponent(urlPath.split('?')[0]);
   const [base, rel] = p.startsWith('/vendor/pglite/') ? [VENDOR, p.slice('/vendor/pglite/'.length)] : [DIST, p === '/' ? '' : p.slice(1)];
@@ -22,6 +33,11 @@ function resolve(urlPath) {
 }
 
 http.createServer((req, res) => {
+  if (req.url.startsWith('/api/')) {
+    if (progressDb && handleApi(req, res, progressDb)) return;
+    res.writeHead(503, { 'content-type': 'application/json', 'access-control-allow-origin': '*' }).end('{"error":"progress tracking is unavailable"}');
+    return;
+  }
   const file = resolve(req.url);
   if (!file) { res.writeHead(403).end('forbidden'); return; }
   if (file === DIST) {
@@ -36,4 +52,7 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'content-length': st.size, 'cache-control': vendor ? 'public, max-age=86400' : 'no-cache' });
     fs.createReadStream(file).pipe(res);
   });
-}).listen(PORT, '127.0.0.1', () => console.log(`Lessons: http://localhost:${PORT}/  (serving dist/ + PGlite from node_modules)`));
+}).listen(PORT, '127.0.0.1', () => {
+  console.log(`Lessons: http://localhost:${PORT}/  (serving dist/ + PGlite from node_modules)`);
+  console.log(progressDb ? `Progress: ${DEFAULT_DB_PATH}` : 'Progress: tracking disabled (see error above)');
+});
