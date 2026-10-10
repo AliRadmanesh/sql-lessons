@@ -10,6 +10,11 @@
 import { applyEvents, ValidationError } from './events.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
+const PORT = Number(process.env.PORT) || 8080;
+// Any web page the learner visits could otherwise POST into this database. Only the lessons' own pages may write:
+// file:// pages send Origin "null", and the lesson server sends its own origin. Requests with no Origin (curl,
+// scripts) are not browser requests and are allowed, because they can write from the same machine anyway.
+const ALLOWED_ORIGINS = new Set(['null', `http://localhost:${PORT}`, `http://127.0.0.1:${PORT}`]);
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -50,6 +55,12 @@ function isJsonContentType(header = '') {
 }
 
 async function handleEvents(req, res, db) {
+  const origin = req.headers.origin;
+  if (origin !== undefined && !ALLOWED_ORIGINS.has(origin)) {
+    // No CORS headers here: a refused page must not be granted read access to the answer either.
+    res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' }).end(JSON.stringify({ error: 'origin not allowed' }));
+    return;
+  }
   if (req.method === 'OPTIONS') return send(res, 204);
   if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' }, { Allow: 'POST, OPTIONS' });
   if (!isJsonContentType(req.headers['content-type'])) return send(res, 415, { error: 'content-type must be application/json' });

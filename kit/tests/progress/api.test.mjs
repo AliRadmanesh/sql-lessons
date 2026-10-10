@@ -85,6 +85,55 @@ test('a body that is not application/json returns 415', async () => {
   assert.equal(res.status, 415);
 });
 
+// Node's fetch will not set an Origin header, so these send one with node:http.
+function rawPost(body, origin) {
+  return new Promise((resolve, reject) => {
+    const headers = { 'content-type': 'application/json' };
+    if (origin !== undefined) headers.origin = origin;
+    const req = http.request(`${base}/api/events`, { method: 'POST', headers }, (res) => {
+      let text = '';
+      res.on('data', (c) => { text += c; });
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: text }));
+    });
+    req.on('error', reject);
+    req.end(JSON.stringify(body));
+  });
+}
+
+const sessionRow = (uid) => db.prepare('SELECT COUNT(*) AS n FROM session WHERE client_uid = ?').get(uid).n;
+
+test('a POST from another website is refused and stores nothing', async () => {
+  const res = await rawPost([{ ...sessionEv, uid: 'evil-session' }], 'https://evil.example');
+  assert.equal(res.status, 403);
+  assert.equal(res.headers['access-control-allow-origin'], undefined, 'no CORS grant to the foreign page');
+  assert.equal(sessionRow('evil-session'), 0);
+});
+
+test('an OPTIONS preflight from another website is refused', async () => {
+  const res = await new Promise((resolve, reject) => {
+    const req = http.request(`${base}/api/events`, { method: 'OPTIONS', headers: { origin: 'https://evil.example' } }, (r) => {
+      r.resume();
+      resolve({ status: r.statusCode, headers: r.headers });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+  assert.equal(res.status, 403);
+  assert.equal(res.headers['access-control-allow-origin'], undefined);
+});
+
+test('a POST from a file:// page (origin null) is accepted', async () => {
+  const res = await rawPost([{ ...sessionEv, uid: 'file-session' }], 'null');
+  assert.equal(res.status, 200);
+  assert.equal(sessionRow('file-session'), 1);
+});
+
+test('a POST from the lesson server origin is accepted', async () => {
+  const res = await rawPost([{ ...sessionEv, uid: 'local-session' }], 'http://localhost:8080');
+  assert.equal(res.status, 200);
+  assert.equal(sessionRow('local-session'), 1);
+});
+
 test('paths outside /api are not handled', () => {
   const req = { url: '/lesson-01.html', method: 'GET', headers: {} };
   assert.equal(handleApi(req, {}, db), false);
