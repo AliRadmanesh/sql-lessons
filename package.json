@@ -7,7 +7,10 @@
     "lessons": "node scripts/serve.mjs",
     "bundle:pglite": "node scripts/bundle-pglite.mjs",
     "test:engine": "node kit/kit.test_engine_pg.js",
-    "test:progress": "node --disable-warning=ExperimentalWarning --test kit/tests/progress/*.test.mjs"
+    "test:progress": "node --disable-warning=ExperimentalWarning --test kit/tests/progress/*.test.mjs",
+    "progress:report": "node --disable-warning=ExperimentalWarning scripts/progress-db/report.mjs",
+    "progress:backup": "node --disable-warning=ExperimentalWarning scripts/progress-db/backup.mjs",
+    "progress:schema": "node --disable-warning=ExperimentalWarning scripts/progress-db/dump-schema.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.8"

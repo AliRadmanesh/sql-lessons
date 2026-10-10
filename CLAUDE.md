@@ -18,8 +18,10 @@ Source book: *Learning SQL*, 3rd ed. (Alan Beaulieu). Lesson NN = chapter NN. Ch
 
 ## Layout
 ```
-kit/       kit.core.js kit.pg.js (PGlite driver) kit.style.css kit.shell.html kit.build.py kit.smoke_test.py kit.play_test.py kit.engine.js (MiniSQL, legacy) tests/
-scripts/   serve.mjs (npm run lessons)  bundle-pglite.mjs (for --inline)
+kit/       kit.core.js kit.progress.js (progress tracker) kit.pg.js (PGlite driver) kit.style.css kit.shell.html kit.build.py kit.smoke_test.py kit.play_test.py kit.engine.js (MiniSQL, legacy) tests/ (incl. tests/progress/)
+scripts/   serve.mjs (npm run lessons)  bundle-pglite.mjs (for --inline)  progress-db/ (db, events, api, report, backup, dump-schema)
+db/        progress database: migrations/NNN_*.sql, schema.sql (generated), README.md (starter queries)
+data/      git-ignored: progress.db (+ backups/)
 lessons/   lNN.config.js lNN.seed.sql lNN.slides.html lNN.viz.js lNN.content.js
 dist/      built lessons (lesson-NN-<slug>.html)
 book/      chapter PDFs             reference/  scale-to-millions.html
@@ -33,6 +35,7 @@ book/      chapter PDFs             reference/  scale-to-millions.html
 - Labs: `python3 kit/kit.play_test.py <url-or-file>` plays every lab with the reference, a wrong answer and broken SQL.
 - Driver regression: build the fixture (`python3 kit/kit.build.py 99 --dirs kit/tests kit --out dist/lesson-99.html`), then `python3 kit/tests/pg_playground_test.py`.
 - MiniSQL tests (only if `kit.engine.js` is touched): `node kit/kit.test_engine_pg.js` (all lines must PASS).
+- Progress database: `npm run test:progress` (all progress tests), `npm run progress:report`, `npm run progress:backup`, `npm run progress:schema` (after adding a migration). The DB is `data/progress.db`, written by `npm run lessons`. Lessons work without it: `localStorage` still drives the UI and the database is a write-through record.
 
 ## Working rules
 - Verify every lesson in a real browser before calling it done:

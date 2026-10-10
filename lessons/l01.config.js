@@ -15,14 +15,14 @@ const LESSON = {
   },
   // Order = order on the results slide. review = slide id (section id="...") or index to jump back to.
   items: {
-    cp1: { max: 10, label: 'Pre-relational models', review: 's-hier' },
-    cp2: { max: 15, label: 'Primary & foreign keys', review: 's-keys' },
-    cp3: { max: 10, label: 'Normalization', review: 's-norm' },
-    cp4: { max: 10, label: 'Statement classes', review: 's-classes' },
-    cp5: { max: 10, label: 'Nonprocedural SQL', review: 's-optimizer' },
-    lab1: { max: 15, label: 'Lab 1 · SELECT with WHERE', review: 's-anatomy' },
-    lab2: { max: 15, label: 'Lab 2 · INSERT', review: 's-changing' },
-    lab3: { max: 15, label: 'Lab 3 · fix with UPDATE', review: 's-changing' },
+    cp1: { max: 10, label: 'Pre-relational models', review: 's-hier', concepts: ['data-models'] },
+    cp2: { max: 15, label: 'Primary & foreign keys', review: 's-keys', concepts: ['primary-key', 'foreign-key'] },
+    cp3: { max: 10, label: 'Normalization', review: 's-norm', concepts: ['normalization'] },
+    cp4: { max: 10, label: 'Statement classes', review: 's-classes', concepts: ['statement-classes'] },
+    cp5: { max: 10, label: 'Nonprocedural SQL', review: 's-optimizer', concepts: ['nonprocedural-sql'] },
+    lab1: { max: 15, label: 'Lab 1 · SELECT with WHERE', review: 's-anatomy', concepts: ['select', 'where-clause'] },
+    lab2: { max: 15, label: 'Lab 2 · INSERT', review: 's-changing', concepts: ['insert'] },
+    lab3: { max: 15, label: 'Lab 3 · fix with UPDATE', review: 's-changing', concepts: ['update'] },
   },
   takeaways: [
     "A database system beats paper on speed, multiple indexes and up-to-the-minute data.",

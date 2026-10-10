@@ -367,3 +367,20 @@ The **Engine:** items and "Add …" entries below were written for MiniSQL and a
 - After touching `kit.pg.js` or `kit.core.js`: build and run `kit/kit.play_test.py` on Lesson 01 and on the fixture (`kit/tests/l99.*`), and `kit/tests/pg_playground_test.py`. All must PASS.
 - Check that `items` maxima sum to 100 and that the title-slide chip matches ("N checkpoints · 100 points").
 - Send a short reply: what's covered, anything the chapter mentioned that you deferred, anything Ali should decide.
+
+## 10. Progress tracking (optional, generic)
+
+`kit/kit.progress.js` writes lesson activity to the local progress database through `POST /api/events`
+(`scripts/progress-db/`, schema in `db/`). The lesson never depends on it: every call is guarded
+(`if (window.Progress) …`) and wrapped in try/catch, and an unreachable server leaves events in an outbox in
+`localStorage` until the next successful send. `localStorage` still drives rendering.
+
+- **Automatic.** `kit.core.js` calls `Progress.init(LESSON)` at load, then `Progress.slide(gate)` on every slide change,
+  `Progress.attempt({item, score, skipped, parts?, sql?, verdict?})` on every checkpoint or lab submit and skip, and
+  `Progress.labRun({item, sql, error})` on every lab Run. Lesson authors write nothing extra.
+- **Items.** Item codes must start with `cp` or `lab` followed by a number (`cp3`, `lab2`). Kind and ordinal come from the code.
+- **Optional `concepts`.** An item may list concept tags: `cp2: { max: 15, label: '…', review: 's-keys', concepts: ['primary-key', 'foreign-key'] }`.
+  Tags are lower-case, kebab-case, up to 40 characters. They feed the `v_concept_weakness` view. Items without tags are still tracked.
+- **Time.** Only active time counts: the tab must be visible and the last input under a minute ago. A new session starts on page load and after 30 minutes idle.
+- **Backfill.** Results saved in `localStorage` before tracking existed are sent once, with deterministic ids, so a repeat send is harmless.
+- **Dropped batches.** The server answers 400 for a batch it cannot accept, and the tracker drops that batch with one console warning. Check the console when a lesson's events seem to be missing.
